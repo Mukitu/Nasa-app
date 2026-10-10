@@ -26,33 +26,34 @@ export function createSunTexture(): THREE.CanvasTexture {
   canvas.height = size;
   const ctx = canvas.getContext('2d')!;
 
-  // Base fiery gradient
-  const grad = ctx.createRadialGradient(size / 2, size / 2, size * 0.1, size / 2, size / 2, size / 2);
+  // Super fiery nuclear core gradient
+  const grad = ctx.createRadialGradient(size / 2, size / 2, size * 0.05, size / 2, size / 2, size / 2);
   grad.addColorStop(0, '#ffffff');
-  grad.addColorStop(0.2, '#fff4cc');
-  grad.addColorStop(0.5, '#f59e0b');
-  grad.addColorStop(0.8, '#d97706');
-  grad.addColorStop(1, '#b45309');
+  grad.addColorStop(0.15, '#fffbeb');
+  grad.addColorStop(0.35, '#fde047');
+  grad.addColorStop(0.6, '#f97316');
+  grad.addColorStop(0.85, '#dc2626');
+  grad.addColorStop(1, '#991b1b');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, size, size);
 
-  // Solar turbulence granules
-  ctx.fillStyle = 'rgba(251, 191, 36, 0.2)';
-  for (let i = 0; i < 400; i++) {
+  // Solar flare turbulence loops
+  ctx.fillStyle = 'rgba(254, 240, 138, 0.35)';
+  for (let i = 0; i < 600; i++) {
     const x = Math.random() * size;
     const y = Math.random() * size;
-    const r = Math.random() * 25 + 5;
+    const r = Math.random() * 30 + 6;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // Darker sunspots
-  ctx.fillStyle = 'rgba(180, 83, 9, 0.4)';
-  for (let i = 0; i < 15; i++) {
+  // Dark magnetic sunspots
+  ctx.fillStyle = 'rgba(120, 28, 9, 0.6)';
+  for (let i = 0; i < 20; i++) {
     const x = Math.random() * size;
     const y = Math.random() * size;
-    const r = Math.random() * 12 + 4;
+    const r = Math.random() * 14 + 5;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
@@ -72,71 +73,53 @@ export function createEarthTexture(): THREE.CanvasTexture {
   canvas.height = height;
   const ctx = canvas.getContext('2d')!;
 
-  // Deep oceanic blue
+  // Brilliant rich turquoise and deep sapphire ocean gradient
   const oceanGrad = ctx.createLinearGradient(0, 0, 0, height);
-  oceanGrad.addColorStop(0, '#0a213e');
-  oceanGrad.addColorStop(0.5, '#0d325e');
-  oceanGrad.addColorStop(1, '#081a33');
+  oceanGrad.addColorStop(0, '#0284c7');
+  oceanGrad.addColorStop(0.3, '#0369a1');
+  oceanGrad.addColorStop(0.5, '#0d9488'); // Shallow turquoise Caribbean shelves
+  oceanGrad.addColorStop(0.7, '#075985');
+  oceanGrad.addColorStop(1, '#0c4a6e');
   ctx.fillStyle = oceanGrad;
   ctx.fillRect(0, 0, width, height);
 
-  // Continents: Americas
-  ctx.fillStyle = '#22543d';
-  // North America
+  // Continents: North & South America
+  ctx.fillStyle = '#16a34a'; // Vibrant emerald rainforest green
   ctx.beginPath();
-  ctx.ellipse(width * 0.25, height * 0.35, width * 0.1, height * 0.18, -0.2, 0, Math.PI * 2);
+  ctx.ellipse(width * 0.25, height * 0.35, width * 0.11, height * 0.19, -0.2, 0, Math.PI * 2);
   ctx.fill();
-  // South America
   ctx.beginPath();
-  ctx.ellipse(width * 0.32, height * 0.65, width * 0.07, height * 0.2, 0.3, 0, Math.PI * 2);
+  ctx.ellipse(width * 0.32, height * 0.65, width * 0.08, height * 0.22, 0.3, 0, Math.PI * 2);
   ctx.fill();
 
   // Eurasia & Africa
-  // Europe
-  ctx.fillStyle = '#276749';
+  ctx.fillStyle = '#15803d';
   ctx.beginPath();
-  ctx.ellipse(width * 0.52, height * 0.32, width * 0.08, height * 0.1, 0, 0, Math.PI * 2);
+  ctx.ellipse(width * 0.52, height * 0.32, width * 0.09, height * 0.11, 0, 0, Math.PI * 2);
   ctx.fill();
-  // Africa
-  ctx.fillStyle = '#744210';
+  ctx.fillStyle = '#d97706'; // Saharan golden sand
   ctx.beginPath();
-  ctx.ellipse(width * 0.52, height * 0.55, width * 0.09, height * 0.2, 0.1, 0, Math.PI * 2);
+  ctx.ellipse(width * 0.52, height * 0.52, width * 0.09, height * 0.18, 0.1, 0, Math.PI * 2);
   ctx.fill();
-  // Asia
-  ctx.fillStyle = '#2f855a';
+  ctx.fillStyle = '#16a34a';
   ctx.beginPath();
-  ctx.ellipse(width * 0.72, height * 0.33, width * 0.16, height * 0.16, 0.1, 0, Math.PI * 2);
+  ctx.ellipse(width * 0.74, height * 0.33, width * 0.18, height * 0.18, 0.1, 0, Math.PI * 2);
   ctx.fill();
-  // Australia
-  ctx.fillStyle = '#975a16';
+  ctx.fillStyle = '#ea580c'; // Australian outback rust gold
   ctx.beginPath();
-  ctx.ellipse(width * 0.82, height * 0.72, width * 0.06, height * 0.08, -0.2, 0, Math.PI * 2);
+  ctx.ellipse(width * 0.83, height * 0.72, width * 0.07, height * 0.09, -0.2, 0, Math.PI * 2);
   ctx.fill();
 
-  // Desert regions (Sahara & Gobi)
-  ctx.fillStyle = '#b7791f';
+  // Lush mountain ranges & tundra
+  ctx.fillStyle = '#854d0e';
   ctx.beginPath();
-  ctx.ellipse(width * 0.52, height * 0.44, width * 0.07, height * 0.06, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(width * 0.7, height * 0.36, width * 0.06, height * 0.04, 0, 0, Math.PI * 2);
+  ctx.ellipse(width * 0.21, height * 0.35, width * 0.02, height * 0.15, 0.2, 0, Math.PI * 2);
   ctx.fill();
 
-  // Polar ice caps
-  ctx.fillStyle = '#f0fdf4';
-  ctx.fillRect(0, 0, width, height * 0.07);
-  ctx.fillRect(0, height * 0.92, width, height * 0.08);
-
-  // Coastline highlights and mountain nuances
-  ctx.strokeStyle = '#38a169';
-  ctx.lineWidth = 4;
-  for (let i = 0; i < 30; i++) {
-    const x = Math.random() * width;
-    const y = height * 0.2 + Math.random() * height * 0.6;
-    ctx.beginPath();
-    ctx.arc(x, y, Math.random() * 20 + 10, 0, Math.PI * 2);
-    ctx.stroke();
-  }
+  // Polar ice caps with pure glowing white
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height * 0.09);
+  ctx.fillRect(0, height * 0.91, width, height * 0.09);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;
@@ -152,31 +135,20 @@ export function createEarthCloudTexture(): THREE.CanvasTexture {
   canvas.height = height;
   const ctx = canvas.getContext('2d')!;
 
-  // Transparent background
   ctx.clearRect(0, 0, width, height);
 
-  // White cloud swirls with varying opacity
-  for (let i = 0; i < 800; i++) {
+  // Swirling hurricane clouds and atmospheric fronts
+  for (let i = 0; i < 1100; i++) {
     const x = Math.random() * width;
-    const y = height * 0.1 + Math.random() * height * 0.8;
-    const radiusX = Math.random() * 120 + 30;
-    const radiusY = Math.random() * 35 + 10;
-    const rotation = (Math.random() - 0.5) * 0.6;
-    const opacity = Math.random() * 0.45 + 0.15;
+    const y = height * 0.08 + Math.random() * height * 0.84;
+    const radiusX = Math.random() * 160 + 40;
+    const radiusY = Math.random() * 45 + 14;
+    const rotation = (Math.random() - 0.5) * 0.7;
+    const opacity = Math.random() * 0.65 + 0.25;
 
     ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
     ctx.beginPath();
     ctx.ellipse(x, y, radiusX, radiusY, rotation, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Cyclone swirls
-  for (let i = 0; i < 4; i++) {
-    const cx = (width * (i + 1)) / 5 + (Math.random() - 0.5) * 200;
-    const cy = height * (0.3 + Math.random() * 0.4);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
-    ctx.beginPath();
-    ctx.arc(cx, cy, 45, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -194,17 +166,17 @@ export function createMoonTexture(): THREE.CanvasTexture {
   canvas.height = height;
   const ctx = canvas.getContext('2d')!;
 
-  // Light grey regolith
-  ctx.fillStyle = '#9ca3af';
+  ctx.fillStyle = '#e2e8f0';
   ctx.fillRect(0, 0, width, height);
 
-  // Dark Lunar Maria (basaltic plains)
-  ctx.fillStyle = '#4b5563';
+  // Dark Lunar Maria (Basaltic Plains)
+  ctx.fillStyle = '#475569';
   const mariaLocations = [
-    { x: width * 0.35, y: height * 0.4, rx: 90, ry: 60 },
-    { x: width * 0.48, y: height * 0.38, rx: 70, ry: 50 },
-    { x: width * 0.38, y: height * 0.55, rx: 80, ry: 70 },
-    { x: width * 0.6, y: height * 0.45, rx: 110, ry: 80 },
+    { x: width * 0.35, y: height * 0.4, rx: 110, ry: 75 },
+    { x: width * 0.48, y: height * 0.38, rx: 85, ry: 65 },
+    { x: width * 0.38, y: height * 0.55, rx: 95, ry: 85 },
+    { x: width * 0.62, y: height * 0.45, rx: 130, ry: 95 },
+    { x: width * 0.72, y: height * 0.32, rx: 70, ry: 50 },
   ];
   for (const m of mariaLocations) {
     ctx.beginPath();
@@ -212,35 +184,21 @@ export function createMoonTexture(): THREE.CanvasTexture {
     ctx.fill();
   }
 
-  // Craters with rim shadows & bright ejecta
-  for (let i = 0; i < 250; i++) {
+  // High-contrast Impact Craters with Bright Ejecta Rays
+  for (let i = 0; i < 400; i++) {
     const x = Math.random() * width;
     const y = Math.random() * height;
-    const r = Math.random() * 14 + 2;
+    const r = Math.random() * 16 + 2;
 
-    // Shadow
-    ctx.fillStyle = 'rgba(31, 41, 55, 0.6)';
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
 
-    // Bright rim
-    ctx.strokeStyle = 'rgba(243, 244, 246, 0.7)';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.lineWidth = 1.8;
     ctx.beginPath();
     ctx.arc(x - r * 0.2, y - r * 0.2, r, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  // Tycho-like ray crater
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-  ctx.lineWidth = 1;
-  const tychoX = width * 0.42;
-  const tychoY = height * 0.78;
-  for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
-    ctx.beginPath();
-    ctx.moveTo(tychoX, tychoY);
-    ctx.lineTo(tychoX + Math.cos(a) * 120, tychoY + Math.sin(a) * 120);
     ctx.stroke();
   }
 
@@ -258,46 +216,37 @@ export function createMarsTexture(): THREE.CanvasTexture {
   canvas.height = height;
   const ctx = canvas.getContext('2d')!;
 
-  // Base red-orange regolith
+  // Intense vivid rusty orange-red gradient
   const grad = ctx.createLinearGradient(0, 0, 0, height);
-  grad.addColorStop(0, '#c2410c');
-  grad.addColorStop(0.5, '#ea580c');
+  grad.addColorStop(0, '#f97316');
+  grad.addColorStop(0.3, '#ea580c');
+  grad.addColorStop(0.7, '#c2410c');
   grad.addColorStop(1, '#9a3412');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, width, height);
 
-  // Dark volcanic plains (Syrtis Major, Acidalia)
-  ctx.fillStyle = '#7c2d12';
+  // Dark volcanic basalt regions (Syrtis Major & Valles Marineris)
+  ctx.fillStyle = '#6c230e';
   ctx.beginPath();
-  ctx.ellipse(width * 0.55, height * 0.45, 90, 70, 0.4, 0, Math.PI * 2);
+  ctx.ellipse(width * 0.55, height * 0.45, 120, 85, 0.4, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.beginPath();
-  ctx.ellipse(width * 0.25, height * 0.38, 120, 50, -0.2, 0, Math.PI * 2);
+  ctx.ellipse(width * 0.25, height * 0.38, 150, 65, -0.2, 0, Math.PI * 2);
   ctx.fill();
 
-  // Valles Marineris canyon system
+  // Valles Marineris Canyon fissure
   ctx.strokeStyle = '#451a03';
-  ctx.lineWidth = 5;
+  ctx.lineWidth = 6;
   ctx.beginPath();
-  ctx.moveTo(width * 0.25, height * 0.58);
-  ctx.bezierCurveTo(width * 0.35, height * 0.59, width * 0.42, height * 0.57, width * 0.5, height * 0.6);
+  ctx.moveTo(width * 0.3, height * 0.52);
+  ctx.lineTo(width * 0.55, height * 0.56);
   ctx.stroke();
 
-  // Polar Ice Caps
+  // Polar ice caps (Carbon Dioxide & Water Ice)
   ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, width, height * 0.05); // North cap
-  ctx.fillRect(0, height * 0.94, width, height * 0.06); // South cap
-
-  // Subtle crater impacts
-  ctx.fillStyle = 'rgba(67, 20, 7, 0.4)';
-  for (let i = 0; i < 90; i++) {
-    const x = Math.random() * width;
-    const y = Math.random() * height;
-    ctx.beginPath();
-    ctx.arc(x, y, Math.random() * 8 + 2, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  ctx.fillRect(0, 0, width, height * 0.07);
+  ctx.fillRect(0, height * 0.92, width, height * 0.08);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;
@@ -313,11 +262,11 @@ export function createJupiterTexture(): THREE.CanvasTexture {
   canvas.height = height;
   const ctx = canvas.getContext('2d')!;
 
-  // Alternating atmospheric bands
+  // Rich vibrant copper, cream, gold, and amber atmospheric bands
   const bands = [
-    '#d97706', '#fed7aa', '#b45309', '#ffedd5', '#9a3412',
-    '#fef3c7', '#c2410c', '#fde68a', '#78350f', '#ffedd5',
-    '#d97706', '#fed7aa', '#b45309'
+    '#ea580c', '#fff7ed', '#d97706', '#fef3c7', '#c2410c',
+    '#ffddaa', '#9a3412', '#fde68a', '#78350f', '#fff7ed',
+    '#f97316', '#fed7aa', '#b45309', '#fef08a', '#9a3412'
   ];
   const bandHeight = height / bands.length;
   bands.forEach((color, i) => {
@@ -325,26 +274,23 @@ export function createJupiterTexture(): THREE.CanvasTexture {
     ctx.fillRect(0, i * bandHeight, width, bandHeight);
   });
 
-  // Turbulence wavy borders
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-  for (let i = 0; i < 40; i++) {
-    const y = Math.random() * height;
-    ctx.fillRect(0, y, width, 3);
-  }
-
-  // The Great Red Spot
+  // Great Red Spot with inner swirling detail
   const grsX = width * 0.62;
   const grsY = height * 0.65;
   ctx.fillStyle = '#dc2626';
   ctx.beginPath();
-  ctx.ellipse(grsX, grsY, 55, 32, 0, 0, Math.PI * 2);
+  ctx.ellipse(grsX, grsY, 70, 40, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // White inner vortex ring
-  ctx.strokeStyle = '#fee2e2';
-  ctx.lineWidth = 3;
+  ctx.fillStyle = '#f87171';
   ctx.beginPath();
-  ctx.ellipse(grsX, grsY, 35, 18, 0, 0, Math.PI * 2);
+  ctx.ellipse(grsX, grsY, 48, 25, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#fef2f2';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.ellipse(grsX, grsY, 30, 14, 0, 0, Math.PI * 2);
   ctx.stroke();
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -361,10 +307,9 @@ export function createSaturnTexture(): THREE.CanvasTexture {
   canvas.height = height;
   const ctx = canvas.getContext('2d')!;
 
-  // Smooth butterscotch/gold banding
   const bands = [
     '#eab308', '#fef08a', '#ca8a04', '#fef9c3', '#a16207',
-    '#fef08a', '#ca8a04', '#fef9c3', '#eab308'
+    '#fde047', '#ca8a04', '#fef9c3', '#eab308', '#fde047'
   ];
   const bandHeight = height / bands.length;
   bands.forEach((color, i) => {
@@ -385,23 +330,20 @@ export function createSaturnRingTexture(): THREE.CanvasTexture {
   canvas.height = 1;
   const ctx = canvas.getContext('2d')!;
 
-  // 1D radial ring texture with alpha gaps (Cassini division)
   const grad = ctx.createLinearGradient(0, 0, size, 0);
-  grad.addColorStop(0, 'rgba(0,0,0,0)'); // Inner transparent
-  grad.addColorStop(0.2, 'rgba(217, 180, 120, 0.2)'); // C Ring
-  grad.addColorStop(0.4, 'rgba(235, 205, 150, 0.85)'); // B Ring (dense)
-  grad.addColorStop(0.68, 'rgba(235, 205, 150, 0.9)');
-  grad.addColorStop(0.70, 'rgba(10, 15, 25, 0.05)'); // Cassini Division gap
-  grad.addColorStop(0.74, 'rgba(210, 180, 130, 0.7)'); // A Ring
-  grad.addColorStop(0.92, 'rgba(190, 160, 115, 0.6)');
-  grad.addColorStop(0.95, 'rgba(0, 0, 0, 0)'); // Outer transparent
-  grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(0.18, 'rgba(234, 179, 8, 0.35)');
+  grad.addColorStop(0.4, 'rgba(254, 240, 138, 0.95)');
+  grad.addColorStop(0.68, 'rgba(234, 179, 8, 0.98)');
+  grad.addColorStop(0.70, 'rgba(10, 15, 25, 0.02)'); // Cassini Division Gap
+  grad.addColorStop(0.74, 'rgba(202, 138, 4, 0.9)');
+  grad.addColorStop(0.92, 'rgba(161, 98, 7, 0.8)');
+  grad.addColorStop(0.96, 'rgba(0, 0, 0, 0)');
 
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, size, 1);
 
-  const texture = new THREE.CanvasTexture(canvas);
-  return texture;
+  return new THREE.CanvasTexture(canvas);
 }
 
 export function createUranusTexture(): THREE.CanvasTexture {
@@ -412,15 +354,16 @@ export function createUranusTexture(): THREE.CanvasTexture {
   canvas.height = height;
   const ctx = canvas.getContext('2d')!;
 
+  // Vivid cyan/turquoise ice giant color
   const grad = ctx.createLinearGradient(0, 0, 0, height);
-  grad.addColorStop(0, '#67e8f9');
-  grad.addColorStop(0.5, '#a5f3fc');
-  grad.addColorStop(1, '#38bdf8');
+  grad.addColorStop(0, '#38bdf8');
+  grad.addColorStop(0.4, '#22d3ee');
+  grad.addColorStop(0.7, '#67e8f9');
+  grad.addColorStop(1, '#0284c7');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, width, height);
 
-  const texture = new THREE.CanvasTexture(canvas);
-  return texture;
+  return new THREE.CanvasTexture(canvas);
 }
 
 export function createNeptuneTexture(): THREE.CanvasTexture {
@@ -431,21 +374,26 @@ export function createNeptuneTexture(): THREE.CanvasTexture {
   canvas.height = height;
   const ctx = canvas.getContext('2d')!;
 
+  // Deep intense electric cobalt blue
   const grad = ctx.createLinearGradient(0, 0, 0, height);
-  grad.addColorStop(0, '#1d4ed8');
-  grad.addColorStop(0.4, '#2563eb');
-  grad.addColorStop(0.7, '#1e40af');
+  grad.addColorStop(0, '#2563eb');
+  grad.addColorStop(0.4, '#3b82f6');
+  grad.addColorStop(0.7, '#1d4ed8');
   grad.addColorStop(1, '#1e3a8a');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, width, height);
 
-  // Subtle white methane cloud streaks
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-  ctx.fillRect(50, 110, 180, 4);
-  ctx.fillRect(200, 170, 120, 3);
+  // Methane storm bands & Great Dark Spot
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+  ctx.fillRect(50, 110, 200, 6);
+  ctx.fillRect(190, 170, 140, 5);
 
-  const texture = new THREE.CanvasTexture(canvas);
-  return texture;
+  ctx.fillStyle = '#1e1b4b';
+  ctx.beginPath();
+  ctx.ellipse(320, 130, 45, 25, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  return new THREE.CanvasTexture(canvas);
 }
 
 export function createMercuryTexture(): THREE.CanvasTexture {
@@ -456,20 +404,19 @@ export function createMercuryTexture(): THREE.CanvasTexture {
   canvas.height = height;
   const ctx = canvas.getContext('2d')!;
 
-  ctx.fillStyle = '#6b7280';
+  ctx.fillStyle = '#a1a1aa';
   ctx.fillRect(0, 0, width, height);
 
-  ctx.fillStyle = 'rgba(17, 24, 39, 0.5)';
-  for (let i = 0; i < 90; i++) {
+  ctx.fillStyle = 'rgba(24, 24, 27, 0.7)';
+  for (let i = 0; i < 160; i++) {
     const x = Math.random() * width;
     const y = Math.random() * height;
     ctx.beginPath();
-    ctx.arc(x, y, Math.random() * 6 + 1, 0, Math.PI * 2);
+    ctx.arc(x, y, Math.random() * 8 + 1, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  const texture = new THREE.CanvasTexture(canvas);
-  return texture;
+  return new THREE.CanvasTexture(canvas);
 }
 
 export function createVenusTexture(): THREE.CanvasTexture {
@@ -480,18 +427,15 @@ export function createVenusTexture(): THREE.CanvasTexture {
   canvas.height = height;
   const ctx = canvas.getContext('2d')!;
 
+  // Luminous golden cream sulfuric acid cloud deck
   const grad = ctx.createLinearGradient(0, 0, 0, height);
   grad.addColorStop(0, '#fef08a');
-  grad.addColorStop(0.5, '#fde047');
-  grad.addColorStop(1, '#eab308');
+  grad.addColorStop(0.3, '#facc15');
+  grad.addColorStop(0.7, '#eab308');
+  grad.addColorStop(1, '#ca8a04');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, width, height);
 
-  ctx.fillStyle = 'rgba(234, 179, 8, 0.3)';
-  for (let i = 0; i < 30; i++) {
-    ctx.fillRect(0, Math.random() * height, width, Math.random() * 8 + 2);
-  }
-
-  const texture = new THREE.CanvasTexture(canvas);
-  return texture;
+  return new THREE.CanvasTexture(canvas);
 }
+

@@ -13,7 +13,8 @@ import {
   createMercuryTexture,
   createVenusTexture
 } from './textures';
-import { PlanetId, GraphicsQuality, ViewMode, MissionPhase, LaunchTarget } from '../types/simulation';
+import { PlanetId, GraphicsQuality, ViewMode, MissionPhase, LaunchTarget, PlanetData } from '../types/simulation';
+import { CELESTIAL_BODIES } from '../data/planets';
 
 export interface SceneCallbacks {
   onPlanetSelect?: (planetId: PlanetId) => void;
@@ -21,6 +22,7 @@ export interface SceneCallbacks {
   onCameraMoveEnd?: () => void;
   onLaunchProgressUpdate?: (progress: number, altitudeKm: number, velocityKmh: number, phase: MissionPhase) => void;
   onAutoLaunchStateChange?: (active: boolean) => void;
+  onHoverBody?: (bodyData: PlanetData | null, screenPos: { x: number; y: number } | null) => void;
 }
 
 export class SpaceScene {
@@ -138,14 +140,14 @@ export class SpaceScene {
   }
 
   private setupLighting(): void {
-    const ambientLight = new THREE.AmbientLight(0x1a2638, 0.7);
+    const ambientLight = new THREE.AmbientLight(0x38bdf8, 1.8);
     this.scene.add(ambientLight);
 
-    const sunLight = new THREE.PointLight(0xfff7ed, 3.2, 1800, 0.8);
+    const sunLight = new THREE.PointLight(0xfffbeb, 6.5, 3000, 0.4);
     sunLight.position.set(0, 0, 0);
     this.solarSystemGroup.add(sunLight);
 
-    const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x0f172a, 0.25);
+    const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x0f172a, 0.85);
     this.scene.add(hemiLight);
   }
 
@@ -198,7 +200,7 @@ export class SpaceScene {
 
   private buildSolarSystem(): void {
     // 1. Sun
-    const sunGeo = new THREE.SphereGeometry(7, 32, 32);
+    const sunGeo = new THREE.SphereGeometry(7.2, 64, 64);
     const sunTex = createSunTexture();
     const sunMat = new THREE.MeshBasicMaterial({ map: sunTex, color: 0xffffff });
     const sunMesh = new THREE.Mesh(sunGeo, sunMat);
@@ -206,26 +208,35 @@ export class SpaceScene {
     this.solarSystemGroup.add(sunMesh);
     this.planetMeshes.set('sun', sunMesh);
 
-    // Sun corona
-    const coronaGeo = new THREE.SphereGeometry(7.6, 24, 24);
+    // Sun corona & glowing outer flare
+    const coronaGeo = new THREE.SphereGeometry(8.6, 48, 48);
     const coronaMat = new THREE.MeshBasicMaterial({
       color: 0xf59e0b,
       transparent: true,
-      opacity: 0.22,
+      opacity: 0.45,
       side: THREE.BackSide,
     });
     sunMesh.add(new THREE.Mesh(coronaGeo, coronaMat));
 
-    // Planetary configurations
+    const flareGeo = new THREE.SphereGeometry(10.2, 32, 32);
+    const flareMat = new THREE.MeshBasicMaterial({
+      color: 0xef4444,
+      transparent: true,
+      opacity: 0.25,
+      side: THREE.BackSide,
+    });
+    sunMesh.add(new THREE.Mesh(flareGeo, flareMat));
+
+    // Planetary configurations with super vibrant colors
     const planetConfigs = [
-      { id: 'mercury' as PlanetId, radius: 0.9, dist: 16, textureFn: createMercuryTexture, tilt: 0.03 },
-      { id: 'venus' as PlanetId, radius: 1.6, dist: 24, textureFn: createVenusTexture, tilt: 3.1 },
-      { id: 'earth' as PlanetId, radius: 2.2, dist: 35, textureFn: createEarthTexture, tilt: 0.41 },
-      { id: 'mars' as PlanetId, radius: 1.3, dist: 48, textureFn: createMarsTexture, tilt: 0.44 },
-      { id: 'jupiter' as PlanetId, radius: 4.8, dist: 68, textureFn: createJupiterTexture, tilt: 0.05 },
-      { id: 'saturn' as PlanetId, radius: 3.9, dist: 92, textureFn: createSaturnTexture, tilt: 0.47, hasRings: true },
-      { id: 'uranus' as PlanetId, radius: 2.6, dist: 118, textureFn: createUranusTexture, tilt: 1.7 },
-      { id: 'neptune' as PlanetId, radius: 2.5, dist: 142, textureFn: createNeptuneTexture, tilt: 0.49 },
+      { id: 'mercury' as PlanetId, radius: 0.95, dist: 16, textureFn: createMercuryTexture, tilt: 0.03, emissive: 0x64748b, emissiveIntensity: 0.25 },
+      { id: 'venus' as PlanetId, radius: 1.65, dist: 24, textureFn: createVenusTexture, tilt: 3.1, emissive: 0xeab308, emissiveIntensity: 0.35, haloColor: 0xfde047 },
+      { id: 'earth' as PlanetId, radius: 2.3, dist: 35, textureFn: createEarthTexture, tilt: 0.41, emissive: 0x0284c7, emissiveIntensity: 0.38, haloColor: 0x38bdf8 },
+      { id: 'mars' as PlanetId, radius: 1.35, dist: 48, textureFn: createMarsTexture, tilt: 0.44, emissive: 0xea580c, emissiveIntensity: 0.42, haloColor: 0xf97316 },
+      { id: 'jupiter' as PlanetId, radius: 4.9, dist: 68, textureFn: createJupiterTexture, tilt: 0.05, emissive: 0xd97706, emissiveIntensity: 0.35, haloColor: 0xfed7aa },
+      { id: 'saturn' as PlanetId, radius: 4.0, dist: 92, textureFn: createSaturnTexture, tilt: 0.47, hasRings: true, emissive: 0xca8a04, emissiveIntensity: 0.35, haloColor: 0xfef08a },
+      { id: 'uranus' as PlanetId, radius: 2.7, dist: 118, textureFn: createUranusTexture, tilt: 1.7, emissive: 0x06b6d4, emissiveIntensity: 0.42, haloColor: 0x67e8f9 },
+      { id: 'neptune' as PlanetId, radius: 2.6, dist: 142, textureFn: createNeptuneTexture, tilt: 0.49, emissive: 0x2563eb, emissiveIntensity: 0.42, haloColor: 0x60a5fa },
     ];
 
     planetConfigs.forEach((cfg) => {
@@ -241,27 +252,41 @@ export class SpaceScene {
       const orbitMat = new THREE.LineBasicMaterial({
         color: 0x38bdf8,
         transparent: true,
-        opacity: 0.16,
+        opacity: 0.35,
       });
       this.orbitsGroup.add(new THREE.Line(orbitGeo, orbitMat));
 
-      // Planet Mesh
-      const geo = new THREE.SphereGeometry(cfg.radius, 32, 32);
+      // Planet Mesh with vibrant emissive luminance
+      const geo = new THREE.SphereGeometry(cfg.radius, 64, 64);
       const tex = cfg.textureFn();
       const mat = new THREE.MeshStandardMaterial({
         map: tex,
-        roughness: 0.8,
+        roughness: 0.5,
         metalness: 0.1,
+        emissive: cfg.emissive,
+        emissiveIntensity: cfg.emissiveIntensity,
       });
       const planetMesh = new THREE.Mesh(geo, mat);
       planetMesh.rotation.z = cfg.tilt;
       planetMesh.position.set(cfg.dist, 0, 0);
       planetMesh.userData = { id: cfg.id, dist: cfg.dist, speed: 0.015 / Math.sqrt(cfg.dist) };
 
+      // Atmospheric halo
+      if (cfg.haloColor) {
+        const haloGeo = new THREE.SphereGeometry(cfg.radius * 1.09, 32, 32);
+        const haloMat = new THREE.MeshBasicMaterial({
+          color: cfg.haloColor,
+          transparent: true,
+          opacity: 0.3,
+          side: THREE.BackSide,
+        });
+        planetMesh.add(new THREE.Mesh(haloGeo, haloMat));
+      }
+
       this.solarSystemGroup.add(planetMesh);
       this.planetMeshes.set(cfg.id, planetMesh);
 
-      // Earth specifics: Atmosphere Glow & Dynamic Clouds
+      // Earth specifics: Atmosphere Glow, Dynamic Clouds, Moon & Artificial Satellites
       if (cfg.id === 'earth') {
         const cloudGeo = new THREE.SphereGeometry(cfg.radius * 1.025, 32, 32);
         const cloudTex = createEarthCloudTexture();
@@ -284,7 +309,7 @@ export class SpaceScene {
         });
         planetMesh.add(new THREE.Mesh(atmoGeo, atmoMat));
 
-        // The Moon (Luna) orbiting Earth
+        // The Moon (Luna)
         this.moonGroup = new THREE.Group();
         planetMesh.add(this.moonGroup);
 
@@ -301,23 +326,29 @@ export class SpaceScene {
         this.moonGroup.add(moonMesh);
         this.planetMeshes.set('moon', moonMesh);
 
-        // Moon orbit ring
-        const moonOrbitGeo = new THREE.BufferGeometry();
-        const moonPoints: THREE.Vector3[] = [];
-        for (let i = 0; i <= 64; i++) {
-          const a = (i / 64) * Math.PI * 2;
-          moonPoints.push(new THREE.Vector3(Math.cos(a) * 6.2, 0.4, Math.sin(a) * 6.2));
-        }
-        moonOrbitGeo.setFromPoints(moonPoints);
-        this.moonGroup.add(
-          new THREE.Line(
-            moonOrbitGeo,
-            new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.2 })
-          )
-        );
+        // Moon orbit line
+        this.createOrbitLine(this.moonGroup, 6.2, 0x94a3b8);
+
+        // International Space Station (ISS)
+        const issGroup = this.createSpacecraftMesh('iss', 'International Space Station (ISS)', 0x38bdf8, 'station');
+        issGroup.position.set(3.8, 0.2, 1.2);
+        planetMesh.add(issGroup);
+        this.planetMeshes.set('iss', issGroup as unknown as THREE.Mesh);
+
+        // Hubble Space Telescope
+        const hubbleGroup = this.createSpacecraftMesh('hubble', 'Hubble Space Telescope', 0x60a5fa, 'telescope');
+        hubbleGroup.position.set(-4.5, 0.3, -2.1);
+        planetMesh.add(hubbleGroup);
+        this.planetMeshes.set('hubble', hubbleGroup as unknown as THREE.Mesh);
+
+        // James Webb Space Telescope (Sun-Earth L2)
+        const jwstGroup = this.createSpacecraftMesh('jwst', 'James Webb Space Telescope', 0xf59e0b, 'jwst');
+        jwstGroup.position.set(9.5, 0.8, -1.5);
+        planetMesh.add(jwstGroup);
+        this.planetMeshes.set('jwst', jwstGroup as unknown as THREE.Mesh);
       }
 
-      // Mars specifics
+      // Mars specifics (Moons: Phobos & Deimos, Satellite: MRO)
       if (cfg.id === 'mars') {
         const marsAtmoGeo = new THREE.SphereGeometry(cfg.radius * 1.04, 24, 24);
         const marsAtmoMat = new THREE.MeshBasicMaterial({
@@ -327,9 +358,60 @@ export class SpaceScene {
           side: THREE.BackSide,
         });
         planetMesh.add(new THREE.Mesh(marsAtmoGeo, marsAtmoMat));
+
+        // Phobos
+        const phobosMesh = this.createMoonMesh('phobos', 'Phobos', 0xa1a1aa, 0.25);
+        phobosMesh.position.set(2.8, 0.2, 0.8);
+        planetMesh.add(phobosMesh);
+        this.planetMeshes.set('phobos', phobosMesh);
+
+        // Deimos
+        const deimosMesh = this.createMoonMesh('deimos', 'Deimos', 0x71717a, 0.18);
+        deimosMesh.position.set(-4.2, 0.3, -1.8);
+        planetMesh.add(deimosMesh);
+        this.planetMeshes.set('deimos', deimosMesh);
+
+        // Mars Reconnaissance Orbiter (MRO)
+        const mroGroup = this.createSpacecraftMesh('mro', 'Mars Reconnaissance Orbiter', 0xf97316, 'satellite');
+        mroGroup.position.set(3.3, -0.2, -2.2);
+        planetMesh.add(mroGroup);
+        this.planetMeshes.set('mro', mroGroup as unknown as THREE.Mesh);
       }
 
-      // Saturn specifics
+      // Jupiter specifics (Galilean Moons & Juno Probe)
+      if (cfg.id === 'jupiter') {
+        // Io
+        const ioMesh = this.createMoonMesh('io', 'Io (Galilean Moon)', 0xfacc15, 0.55);
+        ioMesh.position.set(8.2, 0.5, 2.0);
+        planetMesh.add(ioMesh);
+        this.planetMeshes.set('io', ioMesh);
+
+        // Europa
+        const europaMesh = this.createMoonMesh('europa', 'Europa (Icy Moon)', 0xe0f2fe, 0.5);
+        europaMesh.position.set(-10.8, -0.3, 4.5);
+        planetMesh.add(europaMesh);
+        this.planetMeshes.set('europa', europaMesh);
+
+        // Ganymede
+        const ganymedeMesh = this.createMoonMesh('ganymede', 'Ganymede (Largest Moon)', 0x94a3b8, 0.72);
+        ganymedeMesh.position.set(14.0, 0.8, -6.2);
+        planetMesh.add(ganymedeMesh);
+        this.planetMeshes.set('ganymede', ganymedeMesh);
+
+        // Callisto
+        const callistoMesh = this.createMoonMesh('callisto', 'Callisto (Cratered Moon)', 0x64748b, 0.68);
+        callistoMesh.position.set(-17.5, -0.6, -9.0);
+        planetMesh.add(callistoMesh);
+        this.planetMeshes.set('callisto', callistoMesh);
+
+        // Juno Spacecraft
+        const junoGroup = this.createSpacecraftMesh('juno', 'Juno Spacecraft', 0xfbbf24, 'juno');
+        junoGroup.position.set(9.8, 2.2, -3.5);
+        planetMesh.add(junoGroup);
+        this.planetMeshes.set('juno', junoGroup as unknown as THREE.Mesh);
+      }
+
+      // Saturn specifics (Rings, Titan, Enceladus, Cassini)
       if (cfg.hasRings) {
         const ringGeo = new THREE.RingGeometry(cfg.radius * 1.35, cfg.radius * 2.5, 64);
         ringGeo.rotateX(Math.PI / 2);
@@ -342,8 +424,125 @@ export class SpaceScene {
           roughness: 0.7,
         });
         planetMesh.add(new THREE.Mesh(ringGeo, ringMat));
+
+        // Titan
+        const titanMesh = this.createMoonMesh('titan', 'Titan (Atmospheric Moon)', 0xf59e0b, 0.75);
+        titanMesh.position.set(11.8, 0.6, 5.2);
+        planetMesh.add(titanMesh);
+        this.planetMeshes.set('titan', titanMesh);
+
+        // Enceladus
+        const enceladusMesh = this.createMoonMesh('enceladus', 'Enceladus (Geyser Moon)', 0xf8fafc, 0.35);
+        enceladusMesh.position.set(-7.2, -0.4, 3.8);
+        planetMesh.add(enceladusMesh);
+        this.planetMeshes.set('enceladus', enceladusMesh);
+
+        // Cassini
+        const cassiniGroup = this.createSpacecraftMesh('cassini', 'Cassini Orbiter', 0xfef08a, 'satellite');
+        cassiniGroup.position.set(9.2, 1.2, -4.5);
+        planetMesh.add(cassiniGroup);
+        this.planetMeshes.set('cassini', cassiniGroup as unknown as THREE.Mesh);
+      }
+
+      // Uranus specifics (Titania)
+      if (cfg.id === 'uranus') {
+        const titaniaMesh = this.createMoonMesh('titania', 'Titania', 0x67e8f9, 0.45);
+        titaniaMesh.position.set(6.8, 0.5, 2.5);
+        planetMesh.add(titaniaMesh);
+        this.planetMeshes.set('titania', titaniaMesh);
+      }
+
+      // Neptune specifics (Triton)
+      if (cfg.id === 'neptune') {
+        const tritonMesh = this.createMoonMesh('triton', 'Triton (Retrograde Moon)', 0xc084fc, 0.52);
+        tritonMesh.position.set(-6.5, -0.4, -3.2);
+        planetMesh.add(tritonMesh);
+        this.planetMeshes.set('triton', tritonMesh);
       }
     });
+
+    // Deep Space Voyager 1 Probe
+    const voyagerGroup = this.createSpacecraftMesh('voyager1', 'Voyager 1 Interstellar Probe', 0x38bdf8, 'voyager');
+    voyagerGroup.position.set(190, 35, -100);
+    this.solarSystemGroup.add(voyagerGroup);
+    this.planetMeshes.set('voyager1', voyagerGroup as unknown as THREE.Mesh);
+  }
+
+  /** Helper to build 3D Moon meshes */
+  private createMoonMesh(id: string, name: string, colorHex: number, radius: number): THREE.Mesh {
+    const geo = new THREE.SphereGeometry(radius, 24, 24);
+    const mat = new THREE.MeshStandardMaterial({
+      color: colorHex,
+      roughness: 0.8,
+      metalness: 0.1,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.userData = { id, name };
+    return mesh;
+  }
+
+  /** Helper to build 3D Orbit line */
+  private createOrbitLine(group: THREE.Group, radius: number, colorHex: number): void {
+    const geo = new THREE.BufferGeometry();
+    const pts: THREE.Vector3[] = [];
+    for (let i = 0; i <= 64; i++) {
+      const a = (i / 64) * Math.PI * 2;
+      pts.push(new THREE.Vector3(Math.cos(a) * radius, 0, Math.sin(a) * radius));
+    }
+    geo.setFromPoints(pts);
+    group.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: colorHex, transparent: true, opacity: 0.25 })));
+  }
+
+  /** Helper to build 3D Spacecraft / Satellite procedural models */
+  private createSpacecraftMesh(
+    id: string,
+    name: string,
+    colorHex: number,
+    type: 'station' | 'telescope' | 'jwst' | 'satellite' | 'juno' | 'voyager'
+  ): THREE.Group {
+    const group = new THREE.Group();
+    group.userData = { id, name };
+
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.2 });
+    const solarMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.6, roughness: 0.3 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9, roughness: 0.1 });
+
+    if (type === 'station') {
+      // ISS central truss & solar panels
+      const truss = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.2, 8), bodyMat);
+      truss.rotateZ(Math.PI / 2);
+      group.add(truss);
+
+      const panel1 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, 0.4), solarMat);
+      panel1.position.set(-0.8, 0, 0);
+      group.add(panel1);
+
+      const panel2 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, 0.4), solarMat);
+      panel2.position.set(0.8, 0, 0);
+      group.add(panel2);
+    } else if (type === 'jwst') {
+      // JWST gold hexagon shield
+      const shield = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.05, 6), goldMat);
+      shield.rotateX(Math.PI / 3);
+      group.add(shield);
+    } else if (type === 'telescope') {
+      // Hubble cylinder
+      const bus = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.8, 16), bodyMat);
+      group.add(bus);
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.02, 0.25), solarMat);
+      group.add(wing);
+    } else {
+      // Probe with radio dish antenna
+      const bus = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), bodyMat);
+      group.add(bus);
+      const dish = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.05, 0.1, 16), goldMat);
+      dish.position.set(0, 0.25, 0);
+      group.add(dish);
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.02, 0.2), solarMat);
+      group.add(wing);
+    }
+
+    return group;
   }
 
   private buildLaunchPadAndRocket(): void {
@@ -563,23 +762,51 @@ export class SpaceScene {
     });
 
     window.addEventListener('pointermove', (e) => {
-      if (!this.isDragging) return;
+      if (this.isDragging) {
+        const deltaX = e.clientX - this.previousMousePosition.x;
+        const deltaY = e.clientY - this.previousMousePosition.y;
 
-      const deltaX = e.clientX - this.previousMousePosition.x;
-      const deltaY = e.clientY - this.previousMousePosition.y;
+        if (Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y) > 5) {
+          isDragMove = true;
+        }
 
-      if (Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y) > 5) {
-        isDragMove = true;
+        this.sphericalCoords.theta -= deltaX * 0.006;
+        this.sphericalCoords.phi = Math.max(
+          0.1,
+          Math.min(Math.PI - 0.1, this.sphericalCoords.phi - deltaY * 0.006)
+        );
+
+        this.previousMousePosition = { x: e.clientX, y: e.clientY };
+        this.updateCameraFromSpherical();
+        return;
       }
 
-      this.sphericalCoords.theta -= deltaX * 0.006;
-      this.sphericalCoords.phi = Math.max(
-        0.1,
-        Math.min(Math.PI - 0.1, this.sphericalCoords.phi - deltaY * 0.006)
-      );
+      // Hover Raycasting for Celestial Bodies, Moons, & Probes
+      if (this.currentViewMode === 'launch-simulator') return;
 
-      this.previousMousePosition = { x: e.clientX, y: e.clientY };
-      this.updateCameraFromSpherical();
+      const rect = dom.getBoundingClientRect();
+      this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      this.raycaster.setFromCamera(this.mouse, this.camera);
+      const meshesToTest = Array.from(this.planetMeshes.values());
+      const intersects = this.raycaster.intersectObjects(meshesToTest, true);
+
+      if (intersects.length > 0) {
+        dom.style.cursor = 'pointer';
+        let hitObj: THREE.Object3D | null = intersects[0].object;
+        while (hitObj && !hitObj.userData?.id && hitObj.parent) {
+          hitObj = hitObj.parent;
+        }
+        const id = hitObj?.userData?.id as string;
+        if (id && CELESTIAL_BODIES[id]) {
+          this.callbacks.onHoverBody?.(CELESTIAL_BODIES[id], { x: e.clientX, y: e.clientY });
+          return;
+        }
+      }
+
+      dom.style.cursor = 'grab';
+      this.callbacks.onHoverBody?.(null, null);
     });
 
     window.addEventListener('pointerup', () => {
@@ -591,7 +818,7 @@ export class SpaceScene {
       (e) => {
         e.preventDefault();
         const zoomDelta = e.deltaY * 0.02;
-        const minRadius = this.currentViewMode === 'launch-simulator' ? 6 : 4;
+        const minRadius = this.currentViewMode === 'launch-simulator' ? 6 : 2;
         const maxRadius = this.currentViewMode === 'launch-simulator' ? 120 : 350;
         this.sphericalCoords.radius = Math.max(minRadius, Math.min(maxRadius, this.sphericalCoords.radius + zoomDelta));
         this.updateCameraFromSpherical();
@@ -610,14 +837,17 @@ export class SpaceScene {
 
       this.raycaster.setFromCamera(this.mouse, this.camera);
       const meshesToTest = Array.from(this.planetMeshes.values());
-      const intersects = this.raycaster.intersectObjects(meshesToTest, false);
+      const intersects = this.raycaster.intersectObjects(meshesToTest, true);
 
       if (intersects.length > 0) {
-        const hit = intersects[0].object;
-        const id = hit.userData.id as PlanetId;
+        let hitObj: THREE.Object3D | null = intersects[0].object;
+        while (hitObj && !hitObj.userData?.id && hitObj.parent) {
+          hitObj = hitObj.parent;
+        }
+        const id = hitObj?.userData?.id as string;
         if (id) {
-          this.focusOnPlanet(id);
-          this.callbacks.onPlanetSelect?.(id);
+          this.focusOnPlanet(id as PlanetId);
+          this.callbacks.onPlanetSelect?.(id as PlanetId);
         }
       }
     });
@@ -660,7 +890,7 @@ export class SpaceScene {
     this.camera.lookAt(this.cameraLookAtTarget);
   }
 
-  public focusOnPlanet(planetId: PlanetId): void {
+  public focusOnPlanet(planetId: string): void {
     this.targetPlanetId = planetId;
     const mesh = this.planetMeshes.get(planetId);
     if (!mesh) return;
@@ -672,15 +902,14 @@ export class SpaceScene {
     mesh.getWorldPosition(worldPos);
     this.cameraLookAtTarget.copy(worldPos);
 
-    let offsetDistance = 14;
+    let offsetDistance = 12;
     if (planetId === 'sun') offsetDistance = 32;
+    else if (planetId === 'jupiter' || planetId === 'saturn') offsetDistance = 18;
+    else if (planetId === 'uranus' || planetId === 'neptune') offsetDistance = 14;
     else if (planetId === 'earth') offsetDistance = 8.5;
-    else if (planetId === 'moon') offsetDistance = 4.2;
-    else if (planetId === 'mars') offsetDistance = 6.5;
-    else if (planetId === 'jupiter') offsetDistance = 18;
-    else if (planetId === 'saturn') offsetDistance = 17;
+    else if (planetId === 'mars' || planetId === 'venus') offsetDistance = 6.8;
     else if (planetId === 'mercury') offsetDistance = 4.8;
-    else if (planetId === 'venus') offsetDistance = 6.8;
+    else offsetDistance = 3.2; // Moons & artificial satellites close-up view
 
     this.sphericalCoords.radius = offsetDistance;
     this.sphericalCoords.theta = 0.4;

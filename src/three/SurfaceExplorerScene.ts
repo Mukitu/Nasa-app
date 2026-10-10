@@ -63,11 +63,11 @@ export class SurfaceExplorerScene {
   private roverPosition = new THREE.Vector3(0, 0, 0);
   private roverHeading: number = 0; // In radians (0 = facing -Z)
   private currentSpeed: number = 0; // In meters per second
-  private topSpeedMps: number = 5.2; // ~18.7 km/h
-  private reverseSpeedMps: number = -2.5; // ~9 km/h
+  private topSpeedMps: number = 24.0; // Fast ~86 km/h high-performance exploration
+  private reverseSpeedMps: number = -12.0; // ~43 km/h reverse
   private batteryPercent: number = 98.5;
   private distanceTraveledMeters: number = 0;
-  private signalDelaySec: number = 1.28; // Moon ~1.3s, Mars ~250s (modeled realistically)
+  private signalDelaySec: number = 1.28; // Moon ~1.3s, Mars ~250s
   private isPaused: boolean = false;
 
   // Input states
@@ -1317,10 +1317,10 @@ export class SurfaceExplorerScene {
   }
 
   private updateRoverPhysics(delta: number): void {
-    const accelRate = 2.8;
-    const decelRate = 3.6;
-    const brakeRate = 8.5;
-    const steerSpeed = 1.4;
+    const accelRate = 18.0;
+    const decelRate = 8.0;
+    const brakeRate = 22.0;
+    const steerSpeed = 3.2;
 
     // Acceleration / Deceleration
     if (this.inputBrake) {

@@ -271,9 +271,11 @@ class SpeechNarrationService {
       } catch {}
     }
     this.currentUtterance = null;
+    this.state.currentWaypoint = null;
     this.state.isSpeaking = false;
     this.state.isPaused = false;
     this.state.currentSubtitle = '';
+    this.state.progressPercent = 0;
     this.notifyListeners();
   }
 
@@ -281,6 +283,39 @@ class SpeechNarrationService {
     if (this.state.currentWaypoint) {
       this.narrateWaypoint(this.state.currentWaypoint);
     }
+  }
+
+  public narrateCelestialBody(body: {
+    id: string;
+    name: string;
+    type: string;
+    diameterKm: number;
+    description: string;
+    historicalSignificance: string;
+    surfaceTempCelsius: string;
+    atmosphere: string;
+    parentBody?: string;
+  }): void {
+    const script = `${body.name}. ${body.type}. Diameter ${body.diameterKm.toLocaleString()} kilometers. ${body.description} Historical note: ${body.historicalSignificance}. Surface temperature: ${body.surfaceTempCelsius}. Atmosphere composition: ${body.atmosphere}.`;
+
+    this.narrateWaypoint({
+      id: `body-${body.id}`,
+      nasa_id: body.id,
+      imageUrl: '',
+      name: body.name,
+      sublabel: body.type,
+      environment: 'moon',
+      worldPos: { x: 0, z: 0 },
+      searchQuery: body.name,
+      equipmentType: body.type,
+      agency: body.parentBody ? `Orbital Host: ${body.parentBody}` : 'Deep Space Exploration',
+      landingYear: 2026,
+      description: body.description,
+      historicalContext: body.historicalSignificance,
+      realCoordinatesText: `Diameter ${body.diameterKm.toLocaleString()} km • Temp ${body.surfaceTempCelsius}`,
+      spokenNarration: script,
+      discovered: true,
+    });
   }
 
   public toggleMute(): boolean {

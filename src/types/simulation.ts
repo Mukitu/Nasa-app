@@ -17,16 +17,34 @@ export type PlanetId =
   | 'venus'
   | 'earth'
   | 'moon'
+  | 'iss'
+  | 'hubble'
+  | 'jwst'
   | 'mars'
+  | 'phobos'
+  | 'deimos'
+  | 'mro'
   | 'jupiter'
+  | 'io'
+  | 'europa'
+  | 'ganymede'
+  | 'callisto'
+  | 'juno'
   | 'saturn'
+  | 'titan'
+  | 'enceladus'
+  | 'cassini'
   | 'uranus'
-  | 'neptune';
+  | 'titania'
+  | 'neptune'
+  | 'triton'
+  | 'voyager1'
+  | string;
 
 export interface PlanetData {
-  id: PlanetId;
+  id: string;
   name: string;
-  type: 'Star' | 'Terrestrial Planet' | 'Gas Giant' | 'Ice Giant' | 'Natural Satellite';
+  type: string;
   diameterKm: number;
   distanceFromSunAU: number;
   orbitPeriodDays: number;
@@ -38,6 +56,7 @@ export interface PlanetData {
   historicalSignificance: string;
   targetAvailable: boolean;
   artifactsCountEstimate?: string;
+  parentBody?: string;
 }
 
 export type LaunchTarget = 'earth_orbit' | 'lunar_transit' | 'mars_transfer';

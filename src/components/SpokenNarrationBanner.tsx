@@ -30,6 +30,7 @@ export const SpokenNarrationBanner: React.FC<SpokenNarrationBannerProps> = ({
   const [narrationState, setNarrationState] = useState<SpeechNarrationState>(
     speechNarrationService.getState()
   );
+  const [dismissedId, setDismissedId] = useState<string | null>(null);
 
   useEffect(() => {
     return speechNarrationService.subscribe((s) => setNarrationState(s));
@@ -38,16 +39,28 @@ export const SpokenNarrationBanner: React.FC<SpokenNarrationBannerProps> = ({
   const { isSpeaking, isPaused, isMuted, currentWaypoint, currentSubtitle, progressPercent } =
     narrationState;
 
-  // Determine active waypoint to display in unified single card
-  const isNearby = Boolean(nearestAnomaly && nearestDistance !== undefined && nearestDistance <= 12);
-  const activeWaypoint = currentWaypoint || (isNearby ? nearestAnomaly : null);
+  // Auto-clear dismissal lock and stop speech when moving away (>12m)
+  useEffect(() => {
+    if (nearestDistance !== undefined && nearestDistance > 12) {
+      speechNarrationService.stop();
+    }
+    if (nearestDistance !== undefined && nearestDistance > 18) {
+      if (dismissedId) {
+        setDismissedId(null);
+      }
+    }
+  }, [nearestDistance, dismissedId]);
 
-  if (!activeWaypoint) {
+  // Determine active waypoint: ONLY display when rover is nearby (within 12m)
+  const isNearby = Boolean(nearestAnomaly && nearestDistance !== undefined && nearestDistance <= 12);
+  const activeWaypoint = isNearby ? nearestAnomaly : null;
+
+  if (!activeWaypoint || activeWaypoint.id === dismissedId) {
     return null;
   }
 
-  // If user is nearby or narration is active/paused
-  const isNarratingThis = currentWaypoint?.id === activeWaypoint.id && (isSpeaking || isPaused || currentSubtitle);
+  // Check if speech narration is currently playing for this waypoint
+  const isNarratingThis = isSpeaking || isPaused || currentSubtitle;
 
   return (
     <div className="pointer-events-auto fixed bottom-24 sm:bottom-28 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -112,7 +125,12 @@ export const SpokenNarrationBanner: React.FC<SpokenNarrationBannerProps> = ({
             )}
 
             <button
-              onClick={() => speechNarrationService.stop()}
+              onClick={() => {
+                speechNarrationService.stop();
+                if (activeWaypoint) {
+                  setDismissedId(activeWaypoint.id);
+                }
+              }}
               className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-900 border border-slate-700 hover:bg-slate-800 transition-colors cursor-pointer"
               title="Dismiss Panel"
             >

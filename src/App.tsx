@@ -42,6 +42,7 @@ import {
   RoverCameraMode,
   NasaImageItem,
   CollectedDiscovery,
+  PlanetData,
 } from './types/simulation';
 import { aerospaceAudio } from './utils/audio';
 
@@ -117,6 +118,10 @@ export default function App() {
   const [cinematicIsPoi, setCinematicIsPoi] = useState(false);
   const [showDiscoveriesCatalog, setShowDiscoveriesCatalog] = useState(false);
 
+  // 3D Hover Tooltip State
+  const [hoveredBody, setHoveredBody] = useState<PlanetData | null>(null);
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
+
   // NASA Connectivity State
   const [nasaConnected, setNasaConnected] = useState(false);
 
@@ -173,6 +178,10 @@ export default function App() {
       onPlanetSelect: (planetId) => {
         setSelectedPlanetId(planetId);
         if (soundEnabled) aerospaceAudio.playBeep(1200, 0.05);
+      },
+      onHoverBody: (body, pos) => {
+        setHoveredBody(body);
+        setHoverPos(pos);
       },
       onLaunchProgressUpdate: (progress, altitudeKm, velocityKmh, phase) => {
         setLaunchProgress(progress);
@@ -631,6 +640,8 @@ export default function App() {
             selectedPlanetId={selectedPlanetId}
             onSelectPlanet={(id) => setSelectedPlanetId(id)}
             onFocusCamera={handleFocusPlanet}
+            hoveredBody={hoveredBody}
+            hoverPos={hoverPos}
           />
         )}
 
