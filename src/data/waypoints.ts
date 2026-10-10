@@ -1,19 +1,21 @@
 import { SurfaceWaypoint } from '../types/simulation';
 
 /**
- * Historical Lunar & Martian Equipment Waypoints Catalog
+ * Authentic Historical Lunar & Martian Equipment Catalog
  * 
  * Specifically designed for NASA Space Apps Challenge:
  * "Abandoned but not Forgotten: Storytelling about NASA's Discarded Equipment on the Moon and Mars."
  * 
  * Notice:
- * - worldPos represents gameplay navigation coordinates on the 3D surface map.
- * - realCoordinatesText provides authentic documented NASA planetary coordinates.
+ * - worldPos represents 3D coordinates on the procedural planetary terrain.
+ * - realCoordinatesText provides authentic documented NASA planetary landing coordinates.
  * - nasa_id and imageUrl link to verified authentic NASA Image and Video Library assets.
  * - spokenNarration delivers location-triggered voice storytelling for text-to-speech narration.
  */
 export const INITIAL_WAYPOINTS: SurfaceWaypoint[] = [
-  // --- MOON WAYPOINTS ---
+  // ==========================================
+  // --- MOON MISSIONS (LUNAR HERITAGE) ---
+  // ==========================================
   {
     id: 'apollo11_tranquility',
     nasa_id: 'as11-40-5927',
@@ -22,16 +24,16 @@ export const INITIAL_WAYPOINTS: SurfaceWaypoint[] = [
     sublabel: 'Lunar Module "Eagle" Descent Stage & EASEP Package',
     environment: 'moon',
     worldPos: { x: 45, z: -55 },
-    searchQuery: 'Apollo 11 lunar module descent stage Tranquility',
-    description: 'The historic first human landing site on July 20, 1969. The LM Eagle descent stage remains silently parked alongside the Early Apollo Scientific Experiments Package (EASEP) and the famous commemorative plaque.',
-    historicalContext: 'Abandoned deliberately because the ascent stage served as the crew launch vehicle. The descent stage provided a stable launch platform and still houses the gold-foil insulated descent engine and landing gear.',
+    searchQuery: 'Apollo 11 lunar module descent stage Tranquility Base',
+    description: 'Humanity\'s first lunar landing site on July 20, 1969. The LM-5 "Eagle" descent stage remains standing in Mare Tranquillitatis along with the Early Apollo Scientific Experiments Package (EASEP) and the commemorative plaque signed by the Apollo 11 crew and President Nixon.',
+    historicalContext: 'Left behind deliberately when Neil Armstrong and Buzz Aldrin fired the ascent stage to rejoin Michael Collins in orbit. The four-legged gold-foil stage served as the launch pad and remains preserved in the pristine lunar vacuum.',
     realCoordinatesText: '0.67408° N, 23.47297° E (Mare Tranquillitatis)',
     equipmentType: 'Lunar Module Descent Stage (LM-5) & Passive Seismic Experiment',
     agency: 'NASA / Apollo Program',
     landingYear: 1969,
     discovered: false,
     sourceUrl: 'https://images.nasa.gov/details/as11-40-5927',
-    spokenNarration: 'Approaching Apollo 11 Tranquility Base. Landed on Mare Tranquillitatis on July 20th, 1969. Before you stands the Lunar Module Eagle descent stage, manufactured by Grumman Aerospace, alongside the Early Apollo Scientific Experiments Package. This four-legged stage provided the landing platform for Neil Armstrong and Buzz Aldrin. When the ascent stage ignited to return them home, the descent stage was left behind deliberately. Its gold-foil thermal blankets and commemorative plaque remain preserved in the lunar vacuum, marking humanity\'s first footsteps on an extraterrestrial world.'
+    spokenNarration: 'Approaching Apollo 11 Tranquility Base. Landed on Mare Tranquillitatis on July 20th, 1969. Before you stands the Lunar Module Eagle descent stage, manufactured by Grumman Aerospace. This four-legged stage provided the landing platform for Neil Armstrong and Buzz Aldrin. When the ascent stage ignited to return them home, the descent stage was left behind deliberately. Its gold-foil thermal blankets and commemorative plaque remain preserved in the lunar vacuum, marking humanity\'s first footsteps on an extraterrestrial world.'
   },
   {
     id: 'surveyor3_station',
@@ -42,8 +44,8 @@ export const INITIAL_WAYPOINTS: SurfaceWaypoint[] = [
     environment: 'moon',
     worldPos: { x: -60, z: -40 },
     searchQuery: 'Surveyor 3 spacecraft moon lander Apollo 12',
-    description: 'Launched in April 1967, Surveyor 3 dug the first lunar trenches. In November 1969, Apollo 12 pinpoint-landed just 160 meters away; astronauts Pete Conrad and Alan Bean inspected it and retrieved its camera for Earth return.',
-    historicalContext: 'The only robotic spacecraft on another world subsequently visited and inspected by human beings. Examination on Earth revealed how microbes and spacecraft materials withstood years in vacuum and radiation.',
+    description: 'Launched in April 1967, Surveyor 3 dug the first automated soil trenches on the Moon. In November 1969, Apollo 12 executed a pinpoint landing 160 meters away; astronauts Pete Conrad and Alan Bean walked over and retrieved its camera for analysis on Earth.',
+    historicalContext: 'The only robotic spacecraft on another world subsequently visited and inspected by human beings. Analysis on Earth provided irreplaceable data on how spacecraft alloys, optical glass, and wiring endure years of unfiltered space radiation.',
     realCoordinatesText: '3.015° S, 23.418° W (Oceanus Procellarum)',
     equipmentType: 'Robotic Soft-Lander & Surface Sampler Mechanism',
     agency: 'NASA / Jet Propulsion Laboratory',
@@ -53,6 +55,44 @@ export const INITIAL_WAYPOINTS: SurfaceWaypoint[] = [
     spokenNarration: 'Sensor contact: Surveyor 3 robotic lander in Oceanus Procellarum. Touching down in April 1967, this automated probe dug the very first lunar soil trenches to prove the regolith could support heavy spacecraft. In November 1969, Apollo 12 astronauts Pete Conrad and Alan Bean landed only 160 meters away, walked over, and inspected Surveyor 3 in person. They retrieved its television camera and returned it to Earth, providing scientists with unique data on how spacecraft materials endure years of solar radiation and vacuum.'
   },
   {
+    id: 'apollo12_intrepid',
+    nasa_id: 'as12-49-7278',
+    imageUrl: 'https://images-assets.nasa.gov/image/as12-49-7278/as12-49-7278~medium.jpg',
+    name: 'Apollo 12 — Ocean of Storms Site',
+    sublabel: 'Lunar Module "Intrepid" Descent Stage & ALSEP Central Station',
+    environment: 'moon',
+    worldPos: { x: -45, z: -65 },
+    searchQuery: 'Apollo 12 Intrepid descent stage Ocean of Storms ALSEP',
+    description: 'Site of Apollo 12\'s pinpoint landing on November 19, 1969 in Oceanus Procellarum. The Intrepid descent stage rests nearby the nuclear-powered Apollo Lunar Surface Experiments Package (ALSEP), which transmitted seismic and solar wind data back to Earth until 1977.',
+    historicalContext: 'Carried the first SNAP-27 radioisotope thermoelectric generator (RTG) deployed on the Moon. The descent stage remains standing with its gold and aluminized kapton thermal insulation intact.',
+    realCoordinatesText: '3.0124° S, 23.4216° W (Oceanus Procellarum)',
+    equipmentType: 'Lunar Module Descent Stage (LM-6) & ALSEP Radioisotope Station',
+    agency: 'NASA / Apollo Program',
+    landingYear: 1969,
+    discovered: false,
+    sourceUrl: 'https://images.nasa.gov/details/as12-49-7278',
+    spokenNarration: 'Telemetry confirmed: Apollo 12 Intrepid descent stage in the Ocean of Storms. Touched down on November 19th, 1969. Astronauts Pete Conrad and Alan Bean deployed the first nuclear-powered scientific station on the Moon, powered by a SNAP-27 plutonium generator. The descent stage stands beside the ALSEP transmitter array, which relayed deep lunar moonquake measurements to Houston for nearly a decade.'
+  },
+  {
+    id: 'apollo14_antares',
+    nasa_id: 'as14-66-9306',
+    imageUrl: 'https://images-assets.nasa.gov/image/as14-66-9306/as14-66-9306~medium.jpg',
+    name: 'Apollo 14 — Fra Mauro Highlands',
+    sublabel: 'LM "Antares" Descent Stage & Modular Equipment Transporter',
+    environment: 'moon',
+    worldPos: { x: 20, z: -70 },
+    searchQuery: 'Apollo 14 Antares descent stage Fra Mauro MET cart',
+    description: 'Landed on February 5, 1971 in the rugged Fra Mauro crater formation. Astronauts Alan Shepard and Edgar Mitchell explored the area using the Modular Equipment Transporter (MET), a two-wheeled equipment handcart nicknamed the "lunar rickshaw".',
+    historicalContext: 'Both the Antares descent stage and the aluminum MET cart remain preserved on the regolith. Alan Shepard famously hit two golf balls here using a makeshift six-iron attached to a rock-sampling tool.',
+    realCoordinatesText: '3.6453° S, 17.4714° W (Fra Mauro Formation)',
+    equipmentType: 'Lunar Module Descent Stage (LM-8) & MET Wheeled Tool Cart',
+    agency: 'NASA / Apollo Program',
+    landingYear: 1971,
+    discovered: false,
+    sourceUrl: 'https://images.nasa.gov/details/as14-66-9306',
+    spokenNarration: 'Approaching Fra Mauro base: Apollo 14 Antares descent stage. Touching down on February 5th, 1971, Alan Shepard and Edgar Mitchell navigated these undulating hills using the two-wheeled Modular Equipment Transporter. The Antares descent stage and the wheeled transport cart remain parked in the Fra Mauro dust, silent testaments to the mission that reopened human exploration after Apollo 13.'
+  },
+  {
     id: 'apollo15_lrv',
     nasa_id: 'as15-88-11901',
     imageUrl: 'https://images-assets.nasa.gov/image/as15-88-11901/as15-88-11901~medium.jpg',
@@ -60,9 +100,9 @@ export const INITIAL_WAYPOINTS: SurfaceWaypoint[] = [
     sublabel: 'LRV-001 "Hadley Rille Rover"',
     environment: 'moon',
     worldPos: { x: 70, z: 45 },
-    searchQuery: 'Apollo 15 Lunar Roving Vehicle LRV Hadley',
-    description: 'The first electric vehicle driven on the Moon. Driven by David Scott and James Irwin across 27.8 kilometers of Hadley-Apennine terrain, expanding exploration range tenfold.',
-    historicalContext: 'Parked roughly 90 meters from the Falcon Lunar Module before crew liftoff so its color television camera could broadcast the ascent stage launch live to Earth viewers.',
+    searchQuery: 'Apollo 15 Lunar Roving Vehicle LRV Hadley Rille',
+    description: 'The first electric motor vehicle driven on another celestial body. Driven by David Scott and James Irwin in August 1971 across 27.8 kilometers of Hadley-Apennine canyon terrain.',
+    historicalContext: 'Parked approximately 90 meters from the Falcon Lunar Module before crew liftoff so its steerable color television camera could film the ascent stage launch live for spectators on Earth.',
     realCoordinatesText: '26.1322° N, 3.6339° E (Hadley-Apennine)',
     equipmentType: 'Boeing / Delco Lunar Roving Vehicle (LRV-001)',
     agency: 'NASA / Marshall Space Flight Center',
@@ -80,8 +120,8 @@ export const INITIAL_WAYPOINTS: SurfaceWaypoint[] = [
     environment: 'moon',
     worldPos: { x: -35, z: 75 },
     searchQuery: 'Apollo 16 lunar surface Descartes ultraviolet camera',
-    description: 'Site of the first astronomical observatory on the Moon. Astronaut George Carruthers developed the gold-plated Far Ultraviolet Camera/Spectrograph placed in the LM shadow to observe galactic hydrogen and geocorona.',
-    historicalContext: 'Astronomical instrumentation and the Orion LM descent stage left in place in the ancient lunar highlands, preserving early deep-space astronomical observations.',
+    description: 'Site of humanity\'s first astronomical observatory on the Moon in April 1972. Developed by pioneering African-American astrophysicist Dr. George Carruthers, the gold-plated Far Ultraviolet Camera was placed in the LM shadow to photograph Earth\'s upper atmosphere and interstellar hydrogen.',
+    historicalContext: 'While film cassettes were retrieved for return to Earth, the gold-plated telescope tripod mount, ALSEP central station, and the Orion LM descent stage remain permanently situated in the Descartes regolith.',
     realCoordinatesText: '8.9730° S, 15.4981° E (Descartes Highlands)',
     equipmentType: 'Far UV Camera Spectrograph & ALSEP Central Station',
     agency: 'NASA / Naval Research Laboratory',
@@ -89,6 +129,25 @@ export const INITIAL_WAYPOINTS: SurfaceWaypoint[] = [
     discovered: false,
     sourceUrl: 'https://images.nasa.gov/details/as16-114-18439',
     spokenNarration: 'Approaching the Apollo 16 Descartes Highlands site. In April 1972, astronauts John Young and Charles Duke established humanity\'s first astronomical observatory on the lunar surface. Designed by pioneering scientist George Carruthers, the gold-plated Far Ultraviolet Camera photographed Earth\'s upper atmosphere and distant hydrogen clouds from the shadow of the lunar module. Its film was retrieved, but the telescope housing and central experiment station remain preserved in the Descartes regolith.'
+  },
+  {
+    id: 'apollo17_taurus',
+    nasa_id: 'as17-134-20448',
+    imageUrl: 'https://images-assets.nasa.gov/image/as17-134-20448/as17-134-20448~medium.jpg',
+    name: 'Apollo 17 — Taurus-Littrow Valley',
+    sublabel: 'LM "Challenger" Descent Stage & LRV-003',
+    environment: 'moon',
+    worldPos: { x: 55, z: 70 },
+    searchQuery: 'Apollo 17 Challenger descent stage Taurus Littrow LRV rover',
+    description: 'Final Apollo landing site from December 1972. Geologist Harrison Schmitt and Commander Eugene Cernan drove LRV-003 for 35.7 kilometers across the steep mountain valley, discovering volcanic orange soil at Shorty Crater.',
+    historicalContext: 'Parked with its front wheels turned toward the Challenger descent stage. Gene Cernan repaired the LRV\'s rear fender with gray duct tape and lunar maps, a field modification that still sits on the Moon today.',
+    realCoordinatesText: '20.1908° N, 30.7717° E (Taurus-Littrow Valley)',
+    equipmentType: 'Lunar Module Descent Stage (LM-12) & LRV-003',
+    agency: 'NASA / Apollo Program',
+    landingYear: 1972,
+    discovered: false,
+    sourceUrl: 'https://images.nasa.gov/details/as17-134-20448',
+    spokenNarration: 'Navigational beacon: Apollo 17 Taurus-Littrow Valley. In December 1972, Eugene Cernan and Harrison Schmitt completed humanity\'s final Apollo expeditions. Resting on the valley floor is Lunar Roving Vehicle Number 3, complete with its famous duct-tape fender repair, parked beside the Challenger descent stage. This site preserves the final human footsteps on lunar regolith of the twentieth century.'
   },
   {
     id: 'luna9_heritage',
@@ -99,7 +158,7 @@ export const INITIAL_WAYPOINTS: SurfaceWaypoint[] = [
     environment: 'moon',
     worldPos: { x: -85, z: 15 },
     searchQuery: 'Luna 9 lunar lander Ocean of Storms',
-    description: 'On February 3, 1966, Luna 9 became the first human spacecraft to achieve a soft landing on another celestial body, dispelling fears that spacecraft would sink into deep lunar dust.',
+    description: 'On February 3, 1966, Luna 9 became the first human spacecraft to achieve a soft touchdown on another celestial body, dispelling fears that spacecraft would sink into meters of loose dust.',
     historicalContext: 'The petal-shaped 99-kilogram capsule proved the lunar regolith was firm enough to support human landings, blazing the trail for the entire Apollo and Surveyor program.',
     realCoordinatesText: '7.08° N, 64.37° W (Oceanus Procellarum)',
     equipmentType: 'Robotic Soft-Lander & Panoramic Facsimile Photometer',
@@ -109,8 +168,29 @@ export const INITIAL_WAYPOINTS: SurfaceWaypoint[] = [
     sourceUrl: 'https://images.nasa.gov/details/PIA13568',
     spokenNarration: 'Pioneer heritage site reached: Luna 9 in Oceanus Procellarum. On February 3rd, 1966, this 99-kilogram capsule became the first spacecraft from Earth to achieve a survivable soft landing on any celestial body. Its landing proved once and for all that lunar dust would not swallow incoming spacecraft, establishing the physical foundation for both the Surveyor and Apollo expeditions that followed.'
   },
+  {
+    id: 'lunokhod1_luna17',
+    nasa_id: 'GSFC_20171208_Archive_e001550',
+    imageUrl: 'https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001550/GSFC_20171208_Archive_e001550~medium.jpg',
+    name: 'Lunokhod 1 & Luna 17 Landing Station',
+    sublabel: 'First Remote-Controlled Robotic Rover on Another World',
+    environment: 'moon',
+    worldPos: { x: -10, z: 85 },
+    searchQuery: 'Lunokhod 1 rover Luna 17 Mare Imbrium',
+    description: 'Touched down in November 1970 inside Mare Imbrium. The bathtub-shaped eight-wheeled Lunokhod 1 operated for 322 Earth days, traveling over 10.5 kilometers guided by a team in Crimea.',
+    historicalContext: 'Equipped with a solar-heated lid and a French laser retroreflector. In 2010, the NASA Lunar Reconnaissance Orbiter located its exact coordinates, allowing scientists to bounce laser pulses off its reflectors after forty years of silence.',
+    realCoordinatesText: '38.325° N, 35.008° W (Mare Imbrium)',
+    equipmentType: 'Eight-Wheeled Solar Rover & Laser Retroreflector',
+    agency: 'Lavochkin / Soviet Planetary Program',
+    landingYear: 1970,
+    discovered: false,
+    sourceUrl: 'https://images.nasa.gov/details/GSFC_20171208_Archive_e001550',
+    spokenNarration: 'Contact confirmed: Lunokhod 1 rover in Mare Imbrium. Deployed by Luna 17 in November 1970, this was the world\'s first automated wheeled roving vehicle on another planetary body. Its eight wire-mesh wheels carried scientific cameras and soil spectrometers over ten kilometers. Its laser retroreflector continues to reflect light beams sent from Earth observatories today.'
+  },
 
-  // --- MARS WAYPOINTS ---
+  // ==========================================
+  // --- MARS MISSIONS (MARTIAN HERITAGE) ---
+  // ==========================================
   {
     id: 'viking1_station',
     nasa_id: 'PIA00563',
@@ -120,8 +200,8 @@ export const INITIAL_WAYPOINTS: SurfaceWaypoint[] = [
     environment: 'mars',
     worldPos: { x: 50, z: -50 },
     searchQuery: 'Viking 1 lander Mars Chryse Planitia surface',
-    description: 'Touched down July 20, 1976 on the plains of Chryse Planitia. Operated for 2,307 Earth days (over 6 years), transmitting the first panoramic color photos and weather reports from the Martian surface.',
-    historicalContext: 'Operated until November 1982 when a ground command inadvertently overwrote telemetry software. It stands permanently preserved in the cold Martian desert dust.',
+    description: 'Touched down July 20, 1976 on the plains of Chryse Planitia. Operated for 2,307 Earth days (over 6 years), transmitting the first panoramic color photos, biological soil tests, and weather reports from Mars.',
+    historicalContext: 'Operated until November 1982 when an uplink command inadvertently overwrote telemetry software. The three-legged aluminum lander and its robotic soil-sampling arm rest permanently preserved in the cold Martian desert.',
     realCoordinatesText: '22.697° N, 312.05° E (Chryse Planitia)',
     equipmentType: 'Automated Surface Biology & Meteorology Station',
     agency: 'NASA / Langley Research Center',
@@ -129,6 +209,25 @@ export const INITIAL_WAYPOINTS: SurfaceWaypoint[] = [
     discovered: false,
     sourceUrl: 'https://images.nasa.gov/details/PIA00563',
     spokenNarration: 'Approaching Viking 1 Lander, Thomas Mutch Memorial Station, on the plains of Chryse Planitia. Touching down on July 20th, 1976, Viking 1 was humanity\'s first long-duration mission on Mars. It operated for more than six Earth years—2,307 days—sending back the first high-resolution color panoramas and daily weather reports. Operations ended in November 1982 when a ground software update inadvertently severed communication. The three-legged lander stands silently intact in the Martian desert.'
+  },
+  {
+    id: 'viking2_station',
+    nasa_id: 'PIA00571',
+    imageUrl: 'https://images-assets.nasa.gov/image/PIA00571/PIA00571~medium.jpg',
+    name: 'Viking 2 Lander — Utopia Planitia',
+    sublabel: 'Northern Frost Outpost & Seismometer Station',
+    environment: 'mars',
+    worldPos: { x: 85, z: 25 },
+    searchQuery: 'Viking 2 lander Utopia Planitia Mars frost',
+    description: 'Touched down on September 3, 1976 on the boulder-strewn plains of Utopia Planitia. Observed winter water-frost blankets coating the Martian soil and operated its on-deck seismometer.',
+    historicalContext: 'Operated for 1,281 Martian sols until battery exhaustion in April 1980. The three landing footpads and RTG thermal shields remain frozen under the seasonal carbon dioxide frost cycles of the northern plains.',
+    realCoordinatesText: '48.269° N, 134.01° E (Utopia Planitia)',
+    equipmentType: 'Nuclear-Powered Stationary Analytical Lander',
+    agency: 'NASA / Langley Research Center',
+    landingYear: 1976,
+    discovered: false,
+    sourceUrl: 'https://images.nasa.gov/details/PIA00571',
+    spokenNarration: 'Sensor lock: Viking 2 Lander in Utopia Planitia. Touching down in September 1976, Viking 2 examined the northern plains of Mars for nearly four Earth years. It photographed winter water-ice frost coating the surrounding boulders and recorded genuine Martian quakes before its batteries expired in 1980. The silent three-legged station rests intact amidst the red rocks.'
   },
   {
     id: 'pathfinder_sojourner',
@@ -139,15 +238,34 @@ export const INITIAL_WAYPOINTS: SurfaceWaypoint[] = [
     environment: 'mars',
     worldPos: { x: -55, z: -45 },
     searchQuery: 'Mars Pathfinder Sojourner rover Ares Vallis',
-    description: 'On July 4, 1997, Pathfinder used innovative airbags to bounce to a stop in Ares Vallis. The 10.6-kilogram Sojourner microrover rolled off the ramp, becoming humanity\'s first rover on Mars.',
-    historicalContext: 'Operated until September 27, 1997. Sojourner analyzed rocks nicknamed "Barnacle Bill" and "Yogi", proving the viability of autonomous roving vehicles on Mars.',
+    description: 'On July 4, 1997, Pathfinder used an innovative airbag cushion cluster to bounce to a landing in Ares Vallis. The 10.6-kilogram Sojourner microrover rolled down the deployment ramp, becoming humanity\'s first rover on Mars.',
+    historicalContext: 'Operated until September 27, 1997 when the lander battery failed. Sojourner analyzed rocks nicknamed "Barnacle Bill" and "Yogi", proving the rocker-bogie mobility system that powers every subsequent NASA rover.',
     realCoordinatesText: '19.13° N, 326.78° E (Ares Vallis)',
-    equipmentType: 'Airbag Lander & Rocker-Bogie Microrover',
+    equipmentType: 'Airbag Lander Base & Rocker-Bogie Microrover',
     agency: 'NASA / Jet Propulsion Laboratory',
     landingYear: 1997,
     discovered: false,
     sourceUrl: 'https://images.nasa.gov/details/PIA01551',
     spokenNarration: 'Sensor lock: Mars Pathfinder and Sojourner Rover at Carl Sagan Memorial Station in Ares Vallis. Arriving on July 4th, 1997 with an innovative airbag cushion system, Pathfinder deployed Sojourner—a ten-kilogram, six-wheeled vehicle that became the first mobile rover on Mars. Sojourner proved the rocker-bogie suspension system that all future rovers would rely on, analyzing ancient flood-washed boulders until battery exhaustion in late September 1997.'
+  },
+  {
+    id: 'spirit_mer_a',
+    nasa_id: 'PIA05190',
+    imageUrl: 'https://images-assets.nasa.gov/image/PIA05190/PIA05190~medium.jpg',
+    name: 'Spirit Rover (MER-A) — Gusev Crater',
+    sublabel: 'Columbia Memorial Station & The Troy Sand Dune',
+    environment: 'mars',
+    worldPos: { x: -75, z: 35 },
+    searchQuery: 'Spirit rover Gusev crater Mars MER Columbia Memorial',
+    description: 'Landed in Gusev Crater in January 2004. Explored for over six years across 7.7 kilometers, climbing Husband Hill and discovering evidence of ancient hot springs and volcanic hydrothermal systems.',
+    historicalContext: 'In 2006, Spirit\'s right front wheel seized, forcing it to drive in reverse dragging the wheel. In May 2009, it became trapped in a soft sulfate sand dune named "Troy". It operated as a stationary science platform until solar power succumbed to the 2010 winter.',
+    realCoordinatesText: '14.5684° S, 175.4726° E (Gusev Crater)',
+    equipmentType: 'Solar-Powered Exploration Rover (Dormant at Troy)',
+    agency: 'NASA / Jet Propulsion Laboratory',
+    landingYear: 2004,
+    discovered: false,
+    sourceUrl: 'https://images.nasa.gov/details/PIA05190',
+    spokenNarration: 'Approaching the resting site of Spirit, MER-A, in Gusev Crater. Touching down in January 2004 for a planned ninety-day mission, Spirit operated for over six years. Even after its right-front steering wheel jammed, it drove backwards dragging the broken wheel, carving a trench that inadvertently revealed pure silica from ancient hot springs. Embedded in the sand dunes of Troy, Spirit sent its final signal on March 22nd, 2010.'
   },
   {
     id: 'opportunity_merb',
@@ -157,9 +275,9 @@ export const INITIAL_WAYPOINTS: SurfaceWaypoint[] = [
     sublabel: 'Perseverance Valley & 14-Year Endurance Legend',
     environment: 'mars',
     worldPos: { x: 65, z: 60 },
-    searchQuery: 'Opportunity rover Mars Victoria Endeavour crater',
-    description: 'Designed for a 90-sol mission, "Oppy" explored Mars for over 14 years across 45.16 kilometers—the longest drive on another world. Confirmed hematite "blueberries" proving past liquid water.',
-    historicalContext: 'Fell silent in June 2018 during a catastrophic planet-encircling dust storm that blocked sunlight to its solar arrays. Its final resting place is Perseverance Valley on the rim of Endeavour Crater.',
+    searchQuery: 'Opportunity rover Mars Endeavour crater Perseverance Valley',
+    description: 'Designed for a 90-sol mission in 2004, "Oppy" explored Mars for over 14 years across 45.16 kilometers—the longest driving distance ever completed on another world. Confirmed hematite spherules proving past liquid water.',
+    historicalContext: 'Fell silent on June 10, 2018 during a historic global dust storm that darkened the Martian sky for months, cutting solar generation. It rests permanently on the western rim of Endeavour Crater in Perseverance Valley.',
     realCoordinatesText: '2.28° S, 354.74° E (Meridiani Planum)',
     equipmentType: 'Solar-Powered Exploration Rover (MER-B)',
     agency: 'NASA / Jet Propulsion Laboratory',
@@ -169,6 +287,25 @@ export const INITIAL_WAYPOINTS: SurfaceWaypoint[] = [
     spokenNarration: 'Telemetry confirmed: Opportunity Rover, MER-B, resting on the rim of Endeavour Crater in Perseverance Valley. Originally planned for only ninety Martian days in 2004, Opportunity explored for over fourteen Earth years and traveled more than forty-five kilometers. It discovered hematite spherules that proved liquid water once flowed across ancient Mars. In June 2018, an unprecedented global dust storm blocked sunlight from its solar arrays, concluding one of the greatest endurance voyages in exploration history.'
   },
   {
+    id: 'phoenix_lander',
+    nasa_id: 'PIA10710',
+    imageUrl: 'https://images-assets.nasa.gov/image/PIA10710/PIA10710~medium.jpg',
+    name: 'Phoenix Mars Lander — Vastitas Borealis',
+    sublabel: 'Northern Polar Ice Trench & Thermal Analyzer',
+    environment: 'mars',
+    worldPos: { x: -30, z: -80 },
+    searchQuery: 'Phoenix Mars lander polar ice arctic trench',
+    description: 'Touched down May 25, 2008 in the northern polar plains. Using a robotic backhoe arm, Phoenix scraped away reddish surface soil to expose genuine subsurface water-ice that sublimated under the camera gaze.',
+    historicalContext: 'Operated through the arctic summer until November 2008. During the harsh polar winter, thick slabs of frozen carbon dioxide dry ice entombed the lander, permanently crushing its octagonal solar array wings.',
+    realCoordinatesText: '68.2188° N, 234.2508° E (Vastitas Borealis)',
+    equipmentType: 'Stationary Polar Soft-Lander & Robotic Backhoe',
+    agency: 'NASA / University of Arizona / JPL',
+    landingYear: 2008,
+    discovered: false,
+    sourceUrl: 'https://images.nasa.gov/details/PIA10710',
+    spokenNarration: 'Sensor lock: Phoenix Mars Lander in the northern plains of Vastitas Borealis. Touching down in May 2008, Phoenix was the first probe to dig into polar permafrost and directly verify water-ice beneath the Martian dust. As the dark polar winter settled in, extreme sub-zero temperatures and accumulating dry-ice frost crushed its solar panels, leaving the silent lander frozen in the northern arctic expanse.'
+  },
+  {
     id: 'curiosity_msl',
     nasa_id: 'PIA19920',
     imageUrl: 'https://images-assets.nasa.gov/image/PIA19920/PIA19920~medium.jpg',
@@ -176,9 +313,9 @@ export const INITIAL_WAYPOINTS: SurfaceWaypoint[] = [
     sublabel: 'Mount Sharp Sedimentary Strata & ChemCam Platform',
     environment: 'mars',
     worldPos: { x: -40, z: 70 },
-    searchQuery: 'Curiosity rover Gale crater Mount Sharp Mars',
-    description: 'Landed in August 2012 using the unprecedented Sky Crane touchdown maneuver. The 1-ton car-sized rover continues ascending Mount Sharp, analyzing clay-rich mudstones formed in ancient Martian lakes.',
-    historicalContext: 'Carries a radioisotope thermoelectric generator (RTG), CheMin X-ray diffraction, and ChemCam laser spectrometer. Discovered organic molecules and cyclical atmospheric methane.',
+    searchQuery: 'Curiosity rover Gale crater Mount Sharp Mars ChemCam',
+    description: 'Landed in August 2012 via rocket-powered Sky Crane. The nuclear-powered 1-ton mobile laboratory continues ascending Mount Sharp, analyzing clay and sulfate mudstones from ancient Martian lakebeds.',
+    historicalContext: 'Powered by a plutonium radioisotope thermoelectric generator (RTG). Its aluminum wheels exhibit real physical wear and puncture holes from driving over sharp ventifact rocks across more than thirty kilometers.',
     realCoordinatesText: '4.5895° S, 137.4417° E (Gale Crater)',
     equipmentType: 'Nuclear-Powered Mobile Analytical Laboratory (MSL)',
     agency: 'NASA / Jet Propulsion Laboratory',
@@ -188,22 +325,60 @@ export const INITIAL_WAYPOINTS: SurfaceWaypoint[] = [
     spokenNarration: 'Navigational beacon: Curiosity Rover, Mars Science Laboratory, at the base of Mount Sharp in Gale Crater. Lowered by a rocket-powered sky crane in August 2012, this nuclear-powered laboratory confirmed that ancient Gale Crater held habitable freshwater lakes millions of years ago. Equipped with a laser spectrometer and internal chemistry laboratories, Curiosity identified sulfur, nitrogen, and complex organic molecules in Martian mudstones.'
   },
   {
-    id: 'perseverance_jezero',
+    id: 'insight_seismometer',
+    nasa_id: 'PIA23155',
+    imageUrl: 'https://images-assets.nasa.gov/image/PIA23155/PIA23155~medium.jpg',
+    name: 'InSight Lander & SEIS Seismometer',
+    sublabel: 'Interior Geophysical Observatory & Heat Probe',
+    environment: 'mars',
+    worldPos: { x: 30, z: 85 },
+    searchQuery: 'InSight lander Mars seismometer SEIS Elysium Planitia',
+    description: 'Touched down in November 2018 in Elysium Planitia to study the deep interior structure of Mars. Detected over 1,300 marsquakes and meteorite impact reverberations using its ultra-sensitive dome seismometer.',
+    historicalContext: 'Without a wind cleaning event, a thick layer of reddish dust accumulated over its twin circular solar arrays. In December 2022, power generation dropped below operating limits, concluding the mission. Its domed seismometer rests silently on the dirt.',
+    realCoordinatesText: '4.5024° N, 135.6234° E (Elysium Planitia)',
+    equipmentType: 'Stationary Geophysical Lander & SEIS Seismometer Dome',
+    agency: 'NASA / CNES / DLR / JPL',
+    landingYear: 2018,
+    discovered: false,
+    sourceUrl: 'https://images.nasa.gov/details/PIA23155',
+    spokenNarration: 'Approaching InSight Lander in Elysium Planitia. Touching down in November 2018, InSight peered into the deep interior of Mars, mapping the crust, mantle, and molten liquid core by listening to over thirteen hundred marsquakes. With no dust devils to sweep its solar panels clean, dust gradually extinguished its power. InSight sent its poignant final picture in December 2022 before entering permanent sleep.'
+  },
+  {
+    id: 'perseverance_depot',
     nasa_id: 'PIA24487',
     imageUrl: 'https://images-assets.nasa.gov/image/PIA24487/PIA24487~medium.jpg',
-    name: 'Perseverance Rover & Ingenuity Helicopter',
-    sublabel: 'Jezero Crater Delta Ancient Lakebed & Sample Depot',
+    name: 'Perseverance Rover & Three Forks Sample Depot',
+    sublabel: 'Jezero Crater River Delta & Astrobiology Explorer',
     environment: 'mars',
     worldPos: { x: 80, z: -15 },
-    searchQuery: 'Perseverance rover Ingenuity helicopter Jezero crater Mars',
-    description: 'Landed in February 2021 inside Jezero Crater to search for signs of ancient biosignatures. Deployed Ingenuity, the first rotorcraft to fly on another planet (completing 72 historic flights).',
-    historicalContext: 'Actively drilling and sealing titanium sample tubes left on the Martian surface as part of the Mars Sample Return depot architecture.',
+    searchQuery: 'Perseverance rover Jezero crater Three Forks sample depot',
+    description: 'Landed in February 2021 inside Jezero Crater to search for ancient microbial biosignatures along an ancient river delta. Drilled and sealed rock cores in titanium tubes, creating the Three Forks sample depot on the surface.',
+    historicalContext: 'Currently exploring the margin unit and crater rim. It carried the MOXIE instrument that generated oxygen from atmospheric CO2, paving the way for future human expeditions.',
     realCoordinatesText: '18.38° N, 77.58° E (Jezero Crater)',
-    equipmentType: 'Sample Caching Rover & Autonomous Rotorcraft',
+    equipmentType: 'Sample Caching Astrobiology Rover & MOXIE Oxygen Plant',
     agency: 'NASA / Jet Propulsion Laboratory',
     landingYear: 2021,
     discovered: false,
     sourceUrl: 'https://images.nasa.gov/details/PIA24487',
-    spokenNarration: 'Sensor contact: Perseverance Rover and the Ingenuity Helicopter in Jezero Crater. Touching down on February 18th, 2021, Perseverance is exploring an ancient river delta to search for signs of past microbial life. It deployed Ingenuity, which made history with seventy-two powered flights in the thin Martian atmosphere. Perseverance has drilled and cached hermetically sealed rock cores, forming the first extraterrestrial sample depot prepared for future return to Earth.'
+    spokenNarration: 'Sensor contact: Perseverance Rover in Jezero Crater. Touching down on February 18th, 2021, Perseverance is exploring an ancient river delta that once emptied into an extraterrestrial lake. It has drilled, hermetically sealed, and cached rock cores in titanium tubes across the Three Forks landing depot, awaiting future return to Earth labs. Beside it operated MOXIE, demonstrating oxygen generation from the carbon dioxide atmosphere.'
+  },
+  {
+    id: 'ingenuity_helicopter',
+    nasa_id: 'PIA25968',
+    imageUrl: 'https://images-assets.nasa.gov/image/PIA25968/PIA25968~medium.jpg',
+    name: 'Ingenuity Mars Helicopter — Valinor Hills',
+    sublabel: 'First Powered Atmospheric Flight on Another Planet (72 Flights)',
+    environment: 'mars',
+    worldPos: { x: 92, z: -8 },
+    searchQuery: 'Ingenuity Mars helicopter flight 72 rotor damage Valinor Hills',
+    description: 'The historic 1.8-kilogram technology demonstration that completed 72 powered flights in the razor-thin Martian atmosphere. Flew for over 2 hours and covered 17 kilometers as an aerial scout for Perseverance.',
+    historicalContext: 'On Flight 72 in January 2024, Ingenuity experienced a hard landing on sandy terrain, sustaining damage to the carbon-fiber tips of its rotor blades. While unable to fly, its solar panel and onboard computers remain active, logging weather data at Valinor Hills.',
+    realCoordinatesText: '18.42° N, 77.44° E (Valinor Hills, Jezero Crater)',
+    equipmentType: 'Autonomous Solar Rotorcraft (Permanent Ground Outpost)',
+    agency: 'NASA / Jet Propulsion Laboratory',
+    landingYear: 2021,
+    discovered: false,
+    sourceUrl: 'https://images.nasa.gov/details/PIA25968',
+    spokenNarration: 'Historical milestone: Ingenuity Mars Helicopter resting at Valinor Hills. Originally designed for only five test hops, this 1.8-kilogram twin-rotor craft shattered all expectations by making seventy-two aerial flights over three years. On its final landing in January 2024, its carbon-fiber rotor blade tips sustained damage in the dunes. Ingenuity now rests permanently on its four spindly legs as a silent monument to the Wright Brothers moment of another world.'
   }
 ];

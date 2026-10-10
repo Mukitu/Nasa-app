@@ -6,8 +6,6 @@ interface HeaderProps {
   currentView: ViewMode;
   onSelectView: (view: ViewMode) => void;
   onOpenHelp: () => void;
-  soundEnabled: boolean;
-  onToggleSound: () => void;
   discoveriesCount: number;
 }
 
@@ -15,8 +13,6 @@ export const Header: React.FC<HeaderProps> = ({
   currentView,
   onSelectView,
   onOpenHelp,
-  soundEnabled,
-  onToggleSound,
   discoveriesCount,
 }) => {
   return (
@@ -103,22 +99,6 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Zone 3: Primary Action & Controls */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-        {/* Sound Toggle (Muted by default) */}
-        <button
-          onClick={onToggleSound}
-          className={`p-1.5 rounded-lg border text-xs font-tech transition-colors cursor-pointer flex items-center gap-1.5 ${
-            soundEnabled
-              ? 'bg-sky-500/20 border-sky-400 text-sky-300'
-              : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-          }`}
-          title={soundEnabled ? 'Telemetry Audio Active (Click to Mute)' : 'Audio Muted (Click to Unmute)'}
-        >
-          {soundEnabled ? <Volume2 className="w-4 h-4 text-sky-400" /> : <VolumeX className="w-4 h-4" />}
-          <span className="hidden md:inline text-[11px] font-mono-tech">
-            {soundEnabled ? 'AUDIO ON' : 'MUTED'}
-          </span>
-        </button>
-
         <button
           onClick={onOpenHelp}
           title="Mission Operations Briefing Guide"

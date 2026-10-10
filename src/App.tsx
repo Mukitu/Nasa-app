@@ -236,9 +236,6 @@ export default function App() {
           onAnomalyProximity: (wp, dist) => {
             setNearestAnomaly(wp);
             setNearestAnomalyDistance(dist);
-            if (wp && dist <= 12 && soundEnabled) {
-              aerospaceAudio.playSonarPing();
-            }
           },
           onWaypointsUpdate: (updatedWps) => {
             setWaypoints(updatedWps);
@@ -491,20 +488,23 @@ export default function App() {
 
   // Inspect Anomaly from 3D Rover Proximity
   const handleInspectAnomalyWaypoint = useCallback((wp: SurfaceWaypoint) => {
-    // Construct rich record for the waypoint
+    const actualNasaId = wp.nasa_id || wp.id;
+    const actualImageUrl = wp.imageUrl || (wp.environment === 'moon'
+      ? 'https://images-assets.nasa.gov/image/as11-40-5927/as11-40-5927~medium.jpg'
+      : 'https://images-assets.nasa.gov/image/PIA00563/PIA00563~medium.jpg');
+
+    // Construct rich authentic record for the specific waypoint
     const rec: NasaImageItem = {
-      nasa_id: wp.id,
+      nasa_id: actualNasaId,
       title: wp.name,
       description: `${wp.description}\n\nDocumented NASA Landing Coordinates: ${wp.realCoordinatesText}\nProgram/Agency: ${wp.agency}\nTouchdown Year: ${wp.landingYear}\n\nMission Legacy: "${wp.historicalContext}"`,
       date_created: `${wp.landingYear}-01-01`,
       center: wp.agency.includes('JPL') ? 'Jet Propulsion Laboratory' : 'Johnson Space Center',
       keywords: [wp.environment, wp.equipmentType, 'surface hardware', 'exploration history'],
-      thumbUrl: wp.environment === 'moon'
-        ? 'https://images-assets.nasa.gov/image/as11-40-5922/as11-40-5922~thumb.jpg'
-        : 'https://images-assets.nasa.gov/image/PIA22223/PIA22223~thumb.jpg',
-      fullUrl: wp.sourceUrl || '',
+      thumbUrl: actualImageUrl,
+      fullUrl: actualImageUrl,
       media_type: 'image',
-      nasaWebUrl: wp.sourceUrl || `https://images.nasa.gov/search?q=${encodeURIComponent(wp.searchQuery)}`,
+      nasaWebUrl: wp.sourceUrl || `https://images.nasa.gov/details/${encodeURIComponent(actualNasaId)}`,
     };
 
     // Mark waypoint as discovered in scene
@@ -518,9 +518,7 @@ export default function App() {
 
     // Open cinematic discovery view
     handleOpenCinematicRecord(rec, true);
-
-    if (soundEnabled) aerospaceAudio.playBeep(1760, 0.12);
-  }, [soundEnabled, handleToggleCollect, handleOpenCinematicRecord]);
+  }, [handleToggleCollect, handleOpenCinematicRecord]);
 
   // Keyboard shortcut listener
   useEffect(() => {
@@ -551,13 +549,11 @@ export default function App() {
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-[#04060c] text-slate-100 flex flex-col">
-      {/* 1. Header (Top Bar Contract with Sound & Discoveries controls) */}
+      {/* 1. Header (Top Bar with Mission Navigation & Discoveries) */}
       <Header
         currentView={viewMode}
         onSelectView={handleSelectView}
         onOpenHelp={() => setShowWelcomeModal(true)}
-        soundEnabled={soundEnabled}
-        onToggleSound={handleToggleSound}
         discoveriesCount={collectedDiscoveries.length}
       />
 

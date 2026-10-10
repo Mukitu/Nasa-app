@@ -276,48 +276,12 @@ export const RoverHUD: React.FC<RoverHUDProps> = ({
         </div>
       )}
 
-      {/* 2. PROXIMITY ANOMALY DETECTION BANNER */}
-      {nearestAnomaly && nearestDistance <= 12 && (
-        <div className="pointer-events-auto self-center max-w-xl w-full my-auto animate-bounce">
-          <div className="glass-panel rounded-xl p-4 border border-emerald-400/80 bg-slate-950/95 shadow-2xl space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                <span className="font-tech text-xs font-bold text-emerald-300 uppercase tracking-wider">
-                  HISTORICAL EQUIPMENT DETECTED ({nearestDistance}m)
-                </span>
-              </div>
-              <span className="text-[10px] font-mono-tech px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-200">
-                Landed {nearestAnomaly.landingYear}
-              </span>
-            </div>
-
-            <h3 className="font-tech text-base sm:text-lg font-bold text-white tracking-wide">
-              {nearestAnomaly.name}
-            </h3>
-            <p className="text-xs text-slate-300 leading-relaxed font-sans">
-              {nearestAnomaly.description}
-            </p>
-
-            <div className="pt-1 text-[10px] font-mono-tech text-slate-400 border-t border-slate-800">
-              Authentic NASA Coordinates: <span className="text-emerald-300">{nearestAnomaly.realCoordinatesText}</span>
-            </div>
-
-            <div className="pt-2 flex flex-col sm:flex-row items-center gap-2">
-              <button
-                onClick={() => onInspectAnomaly(nearestAnomaly)}
-                className="w-full sm:flex-1 py-2 px-3 rounded-lg text-xs font-tech font-bold uppercase tracking-wider bg-emerald-400 hover:bg-emerald-300 text-slate-950 transition-all cursor-pointer shadow-lg active:scale-95 flex items-center justify-center gap-2"
-              >
-                <Search className="w-4 h-4" />
-                <span>Inspect NASA Archive &amp; Photos [Press E]</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Location-Triggered Spoken Mission Narration Banner with Subtitles */}
-      <SpokenNarrationBanner onInspectWaypoint={onInspectAnomaly} />
+      {/* Unified Single Location Discovery & Spoken Voice Narration Panel */}
+      <SpokenNarrationBanner
+        onInspectWaypoint={onInspectAnomaly}
+        nearestAnomaly={nearestAnomaly}
+        nearestDistance={nearestDistance}
+      />
 
       {/* 3. BOTTOM CONTROL & NAVIGATION DECK */}
       <div className="w-full flex flex-col sm:flex-row items-end justify-between gap-3 pt-2">

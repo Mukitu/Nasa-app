@@ -463,7 +463,10 @@ export class SurfaceExplorerScene {
     this.scene.add(this.terrainMesh);
   }
 
+  private rockObstacles: { x: number; z: number; radius: number }[] = [];
+
   private buildScatteredRocks(): void {
+    this.rockObstacles = [];
     const rockCount = 140;
     const rockMat = new THREE.MeshStandardMaterial({
       color: this.environment === 'moon' ? 0x475569 : 0x9a3412,
@@ -489,6 +492,10 @@ export class SurfaceExplorerScene {
       rock.castShadow = true;
       rock.receiveShadow = true;
       this.rocksGroup.add(rock);
+
+      if (radius > 0.4) {
+        this.rockObstacles.push({ x, z, radius: radius * 1.15 });
+      }
     }
   }
 
@@ -936,6 +943,17 @@ export class SurfaceExplorerScene {
       crystal.userData = { isCrystal: true, isTarget };
       beaconGroup.add(crystal);
 
+      // Physical 3D Spacecraft Hardware Model on the Surface
+      const hwModel = this.create3DHardwareModel(wp);
+      beaconGroup.add(hwModel);
+
+      // Add physical collision obstacle for this hardware location
+      this.rockObstacles.push({
+        x: wp.worldPos.x,
+        z: wp.worldPos.z,
+        radius: 2.2,
+      });
+
       // Ground Pulsing Ring
       const ringGeo = new THREE.RingGeometry(isTarget ? 2.5 : 1.8, isTarget ? 3.2 : 2.2, 24);
       ringGeo.rotateX(-Math.PI / 2);
@@ -951,6 +969,151 @@ export class SurfaceExplorerScene {
 
       this.beaconsGroup.add(beaconGroup);
     });
+  }
+
+  /**
+   * Generates procedural 3D physical hardware model for Moon & Mars missions
+   */
+  private create3DHardwareModel(wp: SurfaceWaypoint): THREE.Group {
+    const hw = new THREE.Group();
+    const isMoon = wp.environment === 'moon';
+    const id = wp.id.toLowerCase();
+
+    if (id.includes('apollo') || id.includes('tranquility') || id.includes('intrepid') || id.includes('antares')) {
+      // Apollo LM Descent Stage
+      const goldMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.9, roughness: 0.2 });
+      const darkMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.4 });
+
+      const body = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.2, 2.4), goldMat);
+      body.position.y = 0.9;
+      hw.add(body);
+
+      const bell = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.8, 12, 1, true), darkMat);
+      bell.position.y = 0.2;
+      bell.rotation.x = Math.PI;
+      hw.add(bell);
+
+      for (let i = 0; i < 4; i++) {
+        const angle = (i * Math.PI) / 2 + Math.PI / 4;
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.8), darkMat);
+        leg.position.set(Math.cos(angle) * 1.5, 0.45, Math.sin(angle) * 1.5);
+        leg.rotation.z = Math.cos(angle) * 0.4;
+        leg.rotation.x = Math.sin(angle) * 0.4;
+        hw.add(leg);
+
+        const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.06, 12), goldMat);
+        pad.position.set(Math.cos(angle) * 1.9, 0.03, Math.sin(angle) * 1.9);
+        hw.add(pad);
+      }
+    } else if (id.includes('lrv') || id.includes('roving')) {
+      // Lunar Roving Vehicle
+      const frameMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.3 });
+      const wheelMat = new THREE.MeshStandardMaterial({ color: 0x334155, wireframe: true });
+
+      const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.2, 1.8), frameMat);
+      chassis.position.y = 0.35;
+      hw.add(chassis);
+
+      [[-0.65, 0.65], [0.65, 0.65], [-0.65, -0.65], [0.65, -0.65]].forEach(([wx, wz]) => {
+        const w = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 12), wheelMat);
+        w.rotation.z = Math.PI / 2;
+        w.position.set(wx, 0.3, wz);
+        hw.add(w);
+      });
+
+      const dish = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 8, 0, Math.PI * 2, 0, Math.PI / 3), frameMat);
+      dish.position.set(0, 0.9, 0.5);
+      dish.rotation.x = -Math.PI / 4;
+      hw.add(dish);
+    } else if (id.includes('viking')) {
+      // Viking Lander
+      const metalMat = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.7, roughness: 0.3 });
+
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.4, 0.6, 6), metalMat);
+      body.position.y = 0.5;
+      hw.add(body);
+
+      for (let i = 0; i < 3; i++) {
+        const angle = (i * Math.PI * 2) / 3;
+        const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.05, 10), metalMat);
+        pad.position.set(Math.cos(angle) * 1.6, 0.03, Math.sin(angle) * 1.6);
+        hw.add(pad);
+      }
+
+      const dish = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 8, 0, Math.PI * 2, 0, Math.PI / 3), metalMat);
+      dish.position.set(0.3, 1.0, 0);
+      dish.rotation.x = -0.6;
+      hw.add(dish);
+    } else if (id.includes('ingenuity')) {
+      // Ingenuity Mars Helicopter
+      const metalMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8, roughness: 0.3 });
+      const carbonMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 });
+
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.25, 0.3), metalMat);
+      box.position.y = 0.35;
+      hw.add(box);
+
+      for (let i = 0; i < 4; i++) {
+        const angle = (i * Math.PI) / 2 + Math.PI / 4;
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.45), carbonMat);
+        leg.position.set(Math.cos(angle) * 0.25, 0.18, Math.sin(angle) * 0.25);
+        leg.rotation.z = Math.cos(angle) * 0.5;
+        leg.rotation.x = Math.sin(angle) * 0.5;
+        hw.add(leg);
+      }
+
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.5), carbonMat);
+      shaft.position.y = 0.6;
+      hw.add(shaft);
+
+      const blade1 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.01, 0.08), carbonMat);
+      blade1.position.y = 0.7;
+      hw.add(blade1);
+
+      const blade2 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.01, 0.08), carbonMat);
+      blade2.position.y = 0.8;
+      blade2.rotation.y = Math.PI / 2;
+      hw.add(blade2);
+    } else if (id.includes('insight')) {
+      // InSight Lander
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.7 });
+      const solarMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, metalness: 0.5, roughness: 0.6 });
+
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.4, 12), bodyMat);
+      body.position.y = 0.4;
+      hw.add(body);
+
+      [-1.3, 1.3].forEach((offset) => {
+        const wing = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.02, 16), solarMat);
+        wing.position.set(offset, 0.45, 0);
+        hw.add(wing);
+      });
+
+      const dome = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), bodyMat);
+      dome.position.set(0.9, 0, 0.9);
+      hw.add(dome);
+    } else {
+      // Generic Rover / Lander Hardware
+      const bodyMat = new THREE.MeshStandardMaterial({
+        color: isMoon ? 0xe2e8f0 : 0xd97706,
+        metalness: 0.75,
+        roughness: 0.3,
+      });
+
+      const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.6, 1.8), bodyMat);
+      chassis.position.y = 0.5;
+      hw.add(chassis);
+
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.1), bodyMat);
+      mast.position.set(0, 1.0, 0.6);
+      hw.add(mast);
+
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.2), bodyMat);
+      head.position.set(0, 1.5, 0.6);
+      hw.add(head);
+    }
+
+    return hw;
   }
 
   /**
@@ -1185,15 +1348,37 @@ export class SurfaceExplorerScene {
       this.roverHeading -= this.inputTurn * effectiveSteerSpeed * delta;
     }
 
-    // Move Rover
+    // Move Rover with Collision Detection
     const moveDist = this.currentSpeed * delta;
-    this.roverPosition.x -= Math.sin(this.roverHeading) * moveDist;
-    this.roverPosition.z -= Math.cos(this.roverHeading) * moveDist;
+    let nextX = this.roverPosition.x - Math.sin(this.roverHeading) * moveDist;
+    let nextZ = this.roverPosition.z - Math.cos(this.roverHeading) * moveDist;
+
+    // Rock & Spacecraft Physical Collision Physics
+    const roverRadius = 1.2;
+    for (const obs of this.rockObstacles) {
+      const dx = nextX - obs.x;
+      const dz = nextZ - obs.z;
+      const dist = Math.hypot(dx, dz);
+      const minDist = obs.radius + roverRadius;
+
+      if (dist < minDist && dist > 0.001) {
+        const overlap = minDist - dist;
+        const nx = dx / dist;
+        const nz = dz / dist;
+
+        // Push rover outward to prevent driving inside rocks
+        nextX += nx * overlap;
+        nextZ += nz * overlap;
+
+        // Dampen velocity on impact
+        this.currentSpeed *= 0.25;
+      }
+    }
 
     // Keep within terrain boundaries
     const bound = this.terrainSize * 0.46;
-    this.roverPosition.x = THREE.MathUtils.clamp(this.roverPosition.x, -bound, bound);
-    this.roverPosition.z = THREE.MathUtils.clamp(this.roverPosition.z, -bound, bound);
+    this.roverPosition.x = THREE.MathUtils.clamp(nextX, -bound, bound);
+    this.roverPosition.z = THREE.MathUtils.clamp(nextZ, -bound, bound);
 
     // Terrain Clamping & Tilt Alignment
     const currentH = this.getTerrainHeight(this.roverPosition.x, this.roverPosition.z);

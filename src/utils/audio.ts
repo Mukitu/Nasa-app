@@ -55,15 +55,16 @@ class AerospaceAudio {
 
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(75, this.ctx.currentTime);
-      osc.frequency.linearRampToValueAtTime(140, this.ctx.currentTime + 1.5);
+      osc.frequency.linearRampToValueAtTime(140, this.ctx.currentTime + 1.2);
 
-      gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.0001, this.ctx.currentTime + 2.0);
+      gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.0001, this.ctx.currentTime + 1.2);
 
       osc.connect(gain);
       gain.connect(this.ctx.destination);
 
       osc.start();
+      osc.stop(this.ctx.currentTime + 1.2);
     } catch {
       // ignore
     }

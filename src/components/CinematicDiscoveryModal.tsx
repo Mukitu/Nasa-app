@@ -59,17 +59,24 @@ export const CinematicDiscoveryModal: React.FC<CinematicDiscoveryModalProps> = (
   // Fetch asset manifest variants via NASA asset endpoint
   useEffect(() => {
     let cancelled = false;
+    setActiveMediaIndex(0);
+    const initialMedia = [record.fullUrl || record.thumbUrl].filter(Boolean) as string[];
+    setAssetUrls(initialMedia);
+
     if (record.nasa_id) {
       setLoadingAssets(true);
       nasaService.fetchAssetManifest(record.nasa_id).then((urls) => {
-        if (!cancelled && urls.length > 0) {
-          // Filter to image and mp4 video files
-          const validMedia = urls.filter((u) =>
-            u.match(/\.(jpg|jpeg|png|mp4)$/i)
-          );
-          setAssetUrls(validMedia.length > 0 ? validMedia : [record.fullUrl || record.thumbUrl]);
+        if (!cancelled) {
+          if (urls.length > 0) {
+            const validMedia = urls.filter((u) => u.match(/\.(jpg|jpeg|png|mp4)$/i));
+            if (validMedia.length > 0) {
+              setAssetUrls(validMedia);
+            }
+          }
           setLoadingAssets(false);
         }
+      }).catch(() => {
+        if (!cancelled) setLoadingAssets(false);
       });
     }
     return () => {
@@ -121,19 +128,6 @@ export const CinematicDiscoveryModal: React.FC<CinematicDiscoveryModalProps> = (
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* Audio Toggle (Muted by default) */}
-            <button
-              onClick={handleToggleSound}
-              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-                soundEnabled
-                  ? 'bg-sky-500/20 border-sky-400 text-sky-300'
-                  : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:text-slate-200'
-              }`}
-              title={soundEnabled ? 'Telemetry Audio Active' : 'Audio Muted (Click to enable)'}
-            >
-              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            </button>
-
             {/* Bookmark / Collect Button */}
             <button
               onClick={handleCollect}
