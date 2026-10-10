@@ -1,0 +1,6 @@
+{
+  "name": "Echoes of Space",
+  "description": "Futuristic NASA-style mission control and interactive 3D space simulation exploring Earth, the Moon, Mars, and discarded space equipment.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
