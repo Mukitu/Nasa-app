@@ -7,8 +7,6 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { SpaceScene } from './three/SpaceScene';
 import { SurfaceExplorerScene } from './three/SurfaceExplorerScene';
 import { Header } from './components/Header';
-import { TelemetryRibbon } from './components/TelemetryRibbon';
-import { NavigationTabs } from './components/NavigationTabs';
 import { ViewportControls } from './components/ViewportControls';
 import { MissionControlPanel } from './components/MissionControlPanel';
 import { SolarSystemViewer } from './components/SolarSystemViewer';
@@ -24,6 +22,7 @@ import { NasaDataView } from './components/NasaDataView';
 import { CinematicLandingTransition } from './components/CinematicLandingTransition';
 import { SettingsModal } from './components/SettingsModal';
 import { WelcomeTourModal } from './components/WelcomeTourModal';
+import { SpacecraftInspectionModal } from './components/SpacecraftInspectionModal';
 import { CELESTIAL_BODIES, SPACECRAFT_FLEET } from './data/planets';
 import { INITIAL_WAYPOINTS } from './data/waypoints';
 import { nasaService } from './services/nasaApi';
@@ -53,7 +52,7 @@ export default function App() {
   const surfaceSceneRef = useRef<SurfaceExplorerScene | null>(null);
 
   // Core Simulation States
-  const [viewMode, setViewMode] = useState<ViewMode>('mission-control');
+  const [viewMode, setViewMode] = useState<ViewMode>('launch-simulator');
   const [selectedPlanetId, setSelectedPlanetId] = useState<PlanetId>('earth');
   const [missionPhase, setMissionPhase] = useState<MissionPhase>('STANDBY');
   const [launchTarget, setLaunchTarget] = useState<LaunchTarget>('lunar_transit');
@@ -117,6 +116,7 @@ export default function App() {
   const [cinematicRecord, setCinematicRecord] = useState<NasaImageItem | null>(null);
   const [cinematicIsPoi, setCinematicIsPoi] = useState(false);
   const [showDiscoveriesCatalog, setShowDiscoveriesCatalog] = useState(false);
+  const [showSpacecraftInspector, setShowSpacecraftInspector] = useState(false);
 
   // 3D Hover Tooltip State
   const [hoveredBody, setHoveredBody] = useState<PlanetData | null>(null);
@@ -192,16 +192,16 @@ export default function App() {
           setAutoLaunchActive(false);
           const currentTgt = launchTargetRef.current;
           if (currentTgt === 'lunar_transit' || currentTgt === 'mars_transfer') {
-            // Automatic smooth transition from deep space travel to landing sequence
-            setTimeout(() => {
-              setShowLandingSequence((curr) => {
-                if (!curr) {
-                  setMissionFlowState('LANDING');
-                  return true;
-                }
-                return curr;
-              });
-            }, 1000);
+            // Automatic smooth transition to direct 3D landing on target surface map
+            const targetEnv = currentTgt === 'mars_transfer' ? 'mars' : 'moon';
+            setSelectedPlanetId(targetEnv);
+            setViewMode(targetEnv);
+            setMissionFlowState('LANDING');
+            setShowLandingSequence(true);
+          } else if (currentTgt === 'earth_orbit') {
+            // Automatic smooth transition to Solar System 3D view focused on Earth
+            setSelectedPlanetId('earth');
+            setViewMode('solar-system');
           }
         }
       },
@@ -264,6 +264,16 @@ export default function App() {
     }
   }, [isSurfaceMode, surfaceEnvironment, soundEnabled, selectedWaypointId, showRoverRouteLine]);
 
+  // Trigger 3D Live Surface Landing on Moon / Mars map
+  useEffect(() => {
+    if (showLandingSequence && surfaceSceneRef.current) {
+      surfaceSceneRef.current.triggerLandingSequence(() => {
+        setShowLandingSequence(false);
+        setMissionFlowState('DRIVE_MODE_ACTIVE');
+      });
+    }
+  }, [showLandingSequence]);
+
   // Update SpaceScene when viewMode changes
   useEffect(() => {
     if (!sceneRef.current) return;
@@ -309,6 +319,18 @@ export default function App() {
     if (mode === 'mars') {
       setSelectedPlanetId('mars');
       setViewMode('mars');
+      return;
+    }
+    if (mode === 'launch-simulator') {
+      setViewMode('launch-simulator');
+      setAutoLaunchActive(false);
+      if (sceneRef.current) {
+        sceneRef.current.resetFlightToPad();
+      }
+      setLaunchProgress(0);
+      setSimulatedAltitudeKm(0);
+      setSimulatedVelocityKmh(0);
+      setMissionPhase('STANDBY');
       return;
     }
 
@@ -564,21 +586,7 @@ export default function App() {
         onSelectView={handleSelectView}
         onOpenHelp={() => setShowWelcomeModal(true)}
         discoveriesCount={collectedDiscoveries.length}
-      />
-
-      {/* 2. Top Aerospace Telemetry Ribbon */}
-      <TelemetryRibbon
-        missionPhase={missionPhase}
-        target={launchTarget}
-        nasaConnected={nasaConnected}
-        onOpenNasaArchive={() => setViewMode('archive')}
-      />
-
-      {/* 3. Navigation Tabs Mode Switcher */}
-      <NavigationTabs
-        currentView={viewMode}
-        onSelectView={handleSelectView}
-        discoveriesCount={collectedDiscoveries.length}
+        onOpenSpacecraftInspector={() => setShowSpacecraftInspector(true)}
       />
 
       {/* 4. Main Viewport Area */}
@@ -715,6 +723,9 @@ export default function App() {
             onReturnToMissionControl={() => {
               setViewMode('mission-control');
             }}
+            onLaunchNewMission={() => {
+              handleSelectView('launch-simulator');
+            }}
             onInspectAnomaly={(wp) => {
               handleInspectAnomalyWaypoint(wp);
             }}
@@ -755,31 +766,20 @@ export default function App() {
         <CinematicLandingTransition
           target={launchTarget}
           onComplete={() => {
+            surfaceSceneRef.current?.skipLandingSequence();
             setShowLandingSequence(false);
             setMissionFlowState('DRIVE_MODE_ACTIVE');
-            if (launchTarget === 'mars_transfer') {
-              setSelectedPlanetId('mars');
-              setViewMode('mars');
-            } else {
-              setSelectedPlanetId('moon');
-              setViewMode('moon');
-            }
             if (soundEnabled) {
               aerospaceAudio.playWaypointDiscovered();
             }
           }}
           onSkip={() => {
+            surfaceSceneRef.current?.skipLandingSequence();
             setShowLandingSequence(false);
             setMissionFlowState('DRIVE_MODE_ACTIVE');
-            if (launchTarget === 'mars_transfer') {
-              setSelectedPlanetId('mars');
-              setViewMode('mars');
-            } else {
-              setSelectedPlanetId('moon');
-              setViewMode('moon');
-            }
           }}
           onRetry={() => {
+            surfaceSceneRef.current?.skipLandingSequence();
             setShowLandingSequence(false);
             handleResetAndLaunch();
           }}
@@ -872,6 +872,11 @@ export default function App() {
           }}
         />
       )}
+      {/* 3D Spacecraft Inspection Modal */}
+      <SpacecraftInspectionModal
+        isOpen={showSpacecraftInspector}
+        onClose={() => setShowSpacecraftInspector(false)}
+      />
     </div>
   );
 }

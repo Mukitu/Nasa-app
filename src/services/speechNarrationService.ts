@@ -62,7 +62,7 @@ class SpeechNarrationService {
 
       this.selectedVoice = naturalVoice || englishVoices[0] || voices[0];
       if (this.selectedVoice) {
-        this.state.voiceName = this.selectedVoice.name;
+        this.state.voiceName = `AI Guide (${this.selectedVoice.name})`;
         this.notifyListeners();
       }
     } catch {
@@ -128,7 +128,7 @@ class SpeechNarrationService {
 
     const script =
       waypoint.spokenNarration ||
-      `${waypoint.name}. Historical landing year ${waypoint.landingYear} by ${waypoint.agency}. ${waypoint.description}. Mission context: ${waypoint.historicalContext}. Documented planetary coordinates: ${waypoint.realCoordinatesText}.`;
+      `Hello, space explorer! Welcome to ${waypoint.name}! This historical hardware was placed here in ${waypoint.landingYear} by ${waypoint.agency}. ${waypoint.description} Fun fact: ${waypoint.historicalContext}!`;
 
     this.state.currentWaypoint = waypoint;
     this.state.transcript = script;
@@ -159,8 +159,8 @@ class SpeechNarrationService {
       if (this.selectedVoice) {
         utterance.voice = this.selectedVoice;
       }
-      utterance.rate = 0.94; // Clear, dignified pacing
-      utterance.pitch = 1.0;
+      utterance.rate = 0.85; // Slower, crystal clear, student-friendly AI guide rate
+      utterance.pitch = 1.0; // Friendly, articulate AI robot guide tone
       utterance.volume = 1.0;
 
       // Word/Sentence boundary sync
@@ -296,7 +296,7 @@ class SpeechNarrationService {
     atmosphere: string;
     parentBody?: string;
   }): void {
-    const script = `${body.name}. ${body.type}. Diameter ${body.diameterKm.toLocaleString()} kilometers. ${body.description} Historical note: ${body.historicalSignificance}. Surface temperature: ${body.surfaceTempCelsius}. Atmosphere composition: ${body.atmosphere}.`;
+    const script = `Hello explorer! Welcome to ${body.name}! This is a ${body.type} with a diameter of ${body.diameterKm.toLocaleString()} kilometers. ${body.description} Fun fact: ${body.historicalSignificance}! Surface temperature averages around ${body.surfaceTempCelsius}.`;
 
     this.narrateWaypoint({
       id: `body-${body.id}`,

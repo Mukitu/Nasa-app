@@ -439,3 +439,217 @@ export function createVenusTexture(): THREE.CanvasTexture {
   return new THREE.CanvasTexture(canvas);
 }
 
+/** Pure Luminous White Thermal Protection Tile Texture with seams & rivets */
+export function createSpacecraftTileTexture(): THREE.CanvasTexture {
+  const width = 1024;
+  const height = 1024;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+
+  // Luminous pristine pure white thermal protection background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+
+  // High-precision subtle thermal blanket grid lines (tiles)
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 1.2;
+  const tileSize = 64;
+  for (let x = 0; x <= width; x += tileSize) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= height; y += tileSize) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+    ctx.stroke();
+  }
+
+  // Titanium rivets at tile intersections
+  ctx.fillStyle = '#cbd5e1';
+  for (let x = 0; x <= width; x += tileSize) {
+    for (let y = 0; y <= height; y += tileSize) {
+      ctx.beginPath();
+      ctx.arc(x, y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Crisp aerospace panel line accents
+  ctx.strokeStyle = '#0284c7';
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(32, 32, width - 64, height - 64);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(2, 2);
+  return texture;
+}
+
+/** Deep Blue Photovoltaic Solar Panel Texture */
+export function createSolarPanelTexture(): THREE.CanvasTexture {
+  const width = 512;
+  const height = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+
+  // Deep metallic blue silicon wafer
+  const grad = ctx.createLinearGradient(0, 0, width, height);
+  grad.addColorStop(0, '#1e3a8a');
+  grad.addColorStop(0.5, '#1d4ed8');
+  grad.addColorStop(1, '#0f172a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, width, height);
+
+  // Silicon cell grid lines
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 1;
+  const cellSize = 32;
+  for (let x = 0; x <= width; x += cellSize) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= height; y += cellSize) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+    ctx.stroke();
+  }
+
+  // Gold busbar conductors
+  ctx.strokeStyle = '#f59e0b';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(0, height * 0.33);
+  ctx.lineTo(width, height * 0.33);
+  ctx.moveTo(0, height * 0.66);
+  ctx.lineTo(width, height * 0.66);
+  ctx.stroke();
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  return texture;
+}
+
+/** "ECHOES OF SPACE" Bold Mission Markings Texture */
+export function createMissionMarkingsTexture(): THREE.CanvasTexture {
+  const width = 1024;
+  const height = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+
+  // Luminous white background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+
+  // Primary bold dark navy accent banner
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 180, width, 150);
+
+  // Electric cyan double border trim
+  ctx.fillStyle = '#0284c7';
+  ctx.fillRect(0, 174, width, 6);
+  ctx.fillRect(0, 330, width, 6);
+
+  // Prominent "ECHOES OF SPACE" text logo (Left & Center wrapped)
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 64px "Arial Black", "Trebuchet MS", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('ECHOES OF SPACE', width / 2, 245);
+
+  // Secondary "ECHOES OF SPACE" text for 360-degree cylindrical visibility
+  ctx.fillStyle = '#0f172a';
+  ctx.font = '900 36px "Arial Black", sans-serif';
+  ctx.fillText('ECHOES OF SPACE', width / 2, 80);
+  ctx.fillText('ECHOES OF SPACE', width / 2, 430);
+
+  // Subtitle mission branding
+  ctx.fillStyle = '#38bdf8';
+  ctx.font = 'bold 22px "Courier New", monospace';
+  ctx.fillText('NASA INTERPLANETARY EXPLORATOR • EOS-2026', width / 2, 298);
+
+  // US Flag / NASA Badge graphic on left flank
+  ctx.fillStyle = '#0284c7';
+  ctx.fillRect(80, 205, 80, 50);
+  ctx.fillStyle = '#ef4444';
+  ctx.fillRect(80, 205, 80, 8);
+  ctx.fillRect(80, 221, 80, 8);
+  ctx.fillRect(80, 237, 80, 8);
+
+  // NASA Insignia vector on right flank
+  ctx.beginPath();
+  ctx.arc(width - 120, 230, 28, 0, Math.PI * 2);
+  ctx.fillStyle = '#0284c7';
+  ctx.fill();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  const texture = new THREE.CanvasTexture(canvas);
+  return texture;
+}
+
+/** Iconic Mars Radial Orange & White Parachute Pattern Texture */
+export function createMarsParachuteTexture(): THREE.CanvasTexture {
+  const width = 1024;
+  const height = 1024;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+
+  const cx = width / 2;
+  const cy = height / 2;
+  const outerR = width / 2 - 10;
+
+  // Background white
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, width, height);
+
+  // Concentric rings & radial sectors
+  const sectors = 80;
+  for (let i = 0; i < sectors; i++) {
+    const angle1 = (i / sectors) * Math.PI * 2;
+    const angle2 = ((i + 1) / sectors) * Math.PI * 2;
+
+    // Alternating radial orange & white pattern (Perseverance style)
+    const isOrange = (i % 2 === 0) || (i % 7 === 0) || (i % 11 === 0);
+    ctx.fillStyle = isOrange ? '#ea580c' : '#ffffff';
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, outerR, angle1, angle2);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Inner hole / ring
+  ctx.fillStyle = '#0f172a';
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR * 0.15, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Suspension line anchor ring
+  ctx.strokeStyle = '#cbd5e1';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR * 0.9, 0, Math.PI * 2);
+  ctx.stroke();
+
+  return new THREE.CanvasTexture(canvas);
+}
+
+

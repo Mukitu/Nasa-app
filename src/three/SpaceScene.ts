@@ -11,10 +11,14 @@ import {
   createUranusTexture,
   createNeptuneTexture,
   createMercuryTexture,
-  createVenusTexture
+  createVenusTexture,
+  createSpacecraftTileTexture,
+  createSolarPanelTexture,
+  createMissionMarkingsTexture,
 } from './textures';
 import { PlanetId, GraphicsQuality, ViewMode, MissionPhase, LaunchTarget, PlanetData } from '../types/simulation';
 import { CELESTIAL_BODIES } from '../data/planets';
+import { aerospaceAudio } from '../utils/audio';
 
 export interface SceneCallbacks {
   onPlanetSelect?: (planetId: PlanetId) => void;
@@ -639,82 +643,147 @@ export class SpaceScene {
     this.launchPadGroup.add(padLight1);
     this.launchPadGroup.add(padLight1.target);
 
-    // Rocket Stack
+    // Photorealistic Aerospace Spacecraft Stack (ECHOES OF SPACE Exploration Assembly)
     this.rocketMesh = new THREE.Group();
     this.rocketMesh.position.set(0, 3, 0);
 
-    // First stage booster
-    const stage1Geo = new THREE.CylinderGeometry(1.4, 1.4, 12, 32);
-    const rocketBodyMat = new THREE.MeshStandardMaterial({
-      color: 0xf8fafc,
-      roughness: 0.3,
+    const tileTex = createSpacecraftTileTexture();
+    const solarTex = createSolarPanelTexture();
+    const markingsTex = createMissionMarkingsTexture();
+
+    // Pure pristine white ceramic thermal protection material
+    const thermalMat = new THREE.MeshStandardMaterial({
+      map: tileTex,
+      color: 0xffffff,
+      roughness: 0.25,
       metalness: 0.2,
     });
-    const stage1Mesh = new THREE.Mesh(stage1Geo, rocketBodyMat);
+
+    // Dark titanium structural joints
+    const titaniumMat = new THREE.MeshStandardMaterial({
+      color: 0x334155,
+      roughness: 0.4,
+      metalness: 0.8,
+    });
+
+    // Gold Multi-Layer Insulation (MLI) foil patches
+    const goldFoilMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b,
+      roughness: 0.2,
+      metalness: 0.9,
+    });
+
+    // Mission Branding Material ("ECHOES OF SPACE")
+    const markingsMat = new THREE.MeshStandardMaterial({
+      map: markingsTex,
+      roughness: 0.25,
+      metalness: 0.25,
+    });
+
+    // Stage 1 Core Booster Assembly
+    const stage1Geo = new THREE.CylinderGeometry(1.4, 1.4, 12, 32);
+    const stage1Mesh = new THREE.Mesh(stage1Geo, thermalMat);
     stage1Mesh.position.y = 6;
     this.rocketMesh.add(stage1Mesh);
 
-    // Core interstage stripe
-    const stripeGeo = new THREE.CylinderGeometry(1.42, 1.42, 0.8, 32);
-    const stripeMat = new THREE.MeshStandardMaterial({ color: 0x0284c7 });
-    const stripeMesh = new THREE.Mesh(stripeGeo, stripeMat);
-    stripeMesh.position.y = 11.5;
-    this.rocketMesh.add(stripeMesh);
+    // Prominent "ECHOES OF SPACE" decal band on Stage 1 core
+    const coreDecalGeo = new THREE.CylinderGeometry(1.41, 1.41, 3.5, 32);
+    const coreDecalMesh = new THREE.Mesh(coreDecalGeo, markingsMat);
+    coreDecalMesh.position.y = 6.5;
+    this.rocketMesh.add(coreDecalMesh);
 
-    // Second stage
-    const stage2Geo = new THREE.CylinderGeometry(1.25, 1.25, 5, 32);
-    const stage2Mesh = new THREE.Mesh(stage2Geo, rocketBodyMat);
-    stage2Mesh.position.y = 14.5;
+    // Interstage Ring with dark titanium mechanical clamps
+    const interstageGeo = new THREE.CylinderGeometry(1.42, 1.42, 0.8, 32);
+    const interstageMesh = new THREE.Mesh(interstageGeo, titaniumMat);
+    interstageMesh.position.y = 11.5;
+    this.rocketMesh.add(interstageMesh);
+
+    // Stage 2 Upper Service Module
+    const stage2Geo = new THREE.CylinderGeometry(1.28, 1.28, 4.8, 32);
+    const stage2Mesh = new THREE.Mesh(stage2Geo, thermalMat);
+    stage2Mesh.position.y = 14.3;
     this.rocketMesh.add(stage2Mesh);
 
-    // Orion / Crew Capsule conical nose cone
-    const capsuleGeo = new THREE.ConeGeometry(1.3, 3, 32);
-    const capsuleMat = new THREE.MeshStandardMaterial({
-      color: 0xe2e8f0,
-      metalness: 0.5,
-      roughness: 0.3,
+    // Gold Foil MLI Service Ring
+    const mliRingGeo = new THREE.CylinderGeometry(1.3, 1.3, 1.2, 32);
+    const mliRingMesh = new THREE.Mesh(mliRingGeo, goldFoilMat);
+    mliRingMesh.position.y = 13.8;
+    this.rocketMesh.add(mliRingMesh);
+
+    // Payload Fairing / Descent Capsule Carrier with "ECHOES OF SPACE" Mission Badge
+    const fairingGeo = new THREE.CylinderGeometry(1.35, 1.35, 3.2, 32);
+    const fairingMesh = new THREE.Mesh(fairingGeo, markingsMat);
+    fairingMesh.position.y = 17.0;
+    this.rocketMesh.add(fairingMesh);
+
+    // Conical Aerodynamic Heat Shield Nose Cap
+    const noseGeo = new THREE.ConeGeometry(1.35, 2.5, 32);
+    const noseMesh = new THREE.Mesh(noseGeo, thermalMat);
+    noseMesh.position.y = 19.85;
+    this.rocketMesh.add(noseMesh);
+
+    // Deployable Photovoltaic Solar Array Panels (Left & Right)
+    const solarWingGeo = new THREE.BoxGeometry(0.08, 3.8, 1.2);
+    const solarWingMat = new THREE.MeshStandardMaterial({
+      map: solarTex,
+      roughness: 0.2,
+      metalness: 0.7,
     });
-    const capsuleMesh = new THREE.Mesh(capsuleGeo, capsuleMat);
-    capsuleMesh.position.y = 18.5;
-    this.rocketMesh.add(capsuleMesh);
 
-    // Launch Abort System (LAS) tower spike
-    const lasGeo = new THREE.CylinderGeometry(0.08, 0.15, 3.5, 16);
-    const lasMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8 });
-    const lasMesh = new THREE.Mesh(lasGeo, lasMat);
-    lasMesh.position.y = 21.5;
-    this.rocketMesh.add(lasMesh);
+    const leftSolarWing = new THREE.Mesh(solarWingGeo, solarWingMat);
+    leftSolarWing.position.set(-1.8, 14.3, 0);
+    this.rocketMesh.add(leftSolarWing);
 
-    // Solid Rocket Boosters (SRBs) on flanks
-    const srbGeo = new THREE.CylinderGeometry(0.55, 0.55, 11, 24);
-    const srbNoseGeo = new THREE.ConeGeometry(0.55, 1.5, 24);
+    const rightSolarWing = new THREE.Mesh(solarWingGeo, solarWingMat);
+    rightSolarWing.position.set(1.8, 14.3, 0);
+    this.rocketMesh.add(rightSolarWing);
+
+    // High Gain Parabolic Communication Dish Antenna
+    const dishGeo = new THREE.SphereGeometry(0.6, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2.2);
+    const dishMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3, metalness: 0.5, side: THREE.DoubleSide });
+    const dishMesh = new THREE.Mesh(dishGeo, dishMat);
+    dishMesh.rotation.x = Math.PI / 2;
+    dishMesh.position.set(0, 16.5, 1.45);
+    this.rocketMesh.add(dishMesh);
+
+    // Reaction Control System (RCS) Quad Thruster Blocks
+    const rcsGeo = new THREE.BoxGeometry(0.25, 0.25, 0.25);
+    for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 2) {
+      const rcsMesh = new THREE.Mesh(rcsGeo, titaniumMat);
+      rcsMesh.position.set(Math.cos(angle) * 1.35, 15.2, Math.sin(angle) * 1.35);
+      this.rocketMesh.add(rcsMesh);
+    }
+
+    // Solid Rocket Boosters (SRBs) on flanks for heavy liftoff thrust
+    const srbGeo = new THREE.CylinderGeometry(0.58, 0.58, 11, 24);
+    const srbNoseGeo = new THREE.ConeGeometry(0.58, 1.6, 24);
 
     // Left SRB
-    this.srbLeftMesh = new THREE.Mesh(srbGeo, rocketBodyMat);
-    this.srbLeftMesh.position.set(-2, 5.5, 0);
-    const leftNose = new THREE.Mesh(srbNoseGeo, rocketBodyMat);
-    leftNose.position.set(0, 6.25, 0);
+    this.srbLeftMesh = new THREE.Mesh(srbGeo, thermalMat);
+    this.srbLeftMesh.position.set(-2.1, 5.5, 0);
+    const leftNose = new THREE.Mesh(srbNoseGeo, thermalMat);
+    leftNose.position.set(0, 6.3, 0);
     this.srbLeftMesh.add(leftNose);
     this.rocketMesh.add(this.srbLeftMesh);
 
     // Right SRB
-    this.srbRightMesh = new THREE.Mesh(srbGeo, rocketBodyMat);
-    this.srbRightMesh.position.set(2, 5.5, 0);
-    const rightNose = new THREE.Mesh(srbNoseGeo, rocketBodyMat);
-    rightNose.position.set(0, 6.25, 0);
+    this.srbRightMesh = new THREE.Mesh(srbGeo, thermalMat);
+    this.srbRightMesh.position.set(2.1, 5.5, 0);
+    const rightNose = new THREE.Mesh(srbNoseGeo, thermalMat);
+    rightNose.position.set(0, 6.3, 0);
     this.srbRightMesh.add(rightNose);
     this.rocketMesh.add(this.srbRightMesh);
 
-    // Engine nozzles
-    const nozzleGeo = new THREE.CylinderGeometry(0.4, 0.7, 1.2, 16);
-    const nozzleMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.3 });
+    // Main Engine Nozzle Bells (Titanium thrust chamber)
+    const nozzleGeo = new THREE.CylinderGeometry(0.45, 0.8, 1.4, 24);
+    const nozzleMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.85, roughness: 0.2 });
     const nozzleMesh = new THREE.Mesh(nozzleGeo, nozzleMat);
-    nozzleMesh.position.y = -0.6;
+    nozzleMesh.position.y = -0.7;
     this.rocketMesh.add(nozzleMesh);
 
-    // Engine ignition point light
-    this.rocketIgnitionLight = new THREE.PointLight(0xf97316, 0, 50, 1.5);
-    this.rocketIgnitionLight.position.set(0, -1, 0);
+    // Engine ignition light
+    this.rocketIgnitionLight = new THREE.PointLight(0xf97316, 0, 60, 1.5);
+    this.rocketIgnitionLight.position.set(0, -1.2, 0);
     this.rocketMesh.add(this.rocketIgnitionLight);
 
     // Exhaust particle system
@@ -906,7 +975,7 @@ export class SpaceScene {
     if (planetId === 'sun') offsetDistance = 32;
     else if (planetId === 'jupiter' || planetId === 'saturn') offsetDistance = 18;
     else if (planetId === 'uranus' || planetId === 'neptune') offsetDistance = 14;
-    else if (planetId === 'earth') offsetDistance = 8.5;
+    else if (planetId === 'earth') offsetDistance = 14.5;
     else if (planetId === 'mars' || planetId === 'venus') offsetDistance = 6.8;
     else if (planetId === 'mercury') offsetDistance = 4.8;
     else offsetDistance = 3.2; // Moons & artificial satellites close-up view
@@ -931,11 +1000,11 @@ export class SpaceScene {
       this.solarSystemGroup.visible = false;
       this.launchPadGroup.visible = true;
 
-      // Anchor camera strictly to Pad 39B
+      // Anchor camera strictly to Pad 39B at wide majestic view distance
       if (this.launchProgress <= 0.05) {
         this.launchCameraAngle = 'pad';
-        this.camera.position.set(1018, 4, 18);
-        this.camera.lookAt(1000, 7, 0);
+        this.camera.position.set(1042, 14, 42);
+        this.camera.lookAt(1000, 8, 0);
       }
       this.setLaunchProgress(this.launchProgress, this.launchTarget);
       this.updateLaunchCamera(this.launchProgress);
@@ -974,15 +1043,15 @@ export class SpaceScene {
     this.autoLaunchActive = false;
     this.callbacks.onAutoLaunchStateChange?.(false);
     this.launchCameraAngle = 'pad';
-    this.sphericalCoords.radius = 28;
+    this.sphericalCoords.radius = 55;
     this.sphericalCoords.theta = 0.8;
     this.sphericalCoords.phi = Math.PI / 2.4;
     this.solarSystemGroup.visible = false;
     this.launchPadGroup.visible = true;
     this.setLaunchProgress(0, this.launchTarget);
     this.updateLaunchCamera(0);
-    this.camera.position.set(1018, 4, 18);
-    this.camera.lookAt(1000, 7, 0);
+    this.camera.position.set(1042, 14, 42);
+    this.camera.lookAt(1000, 8, 0);
   }
 
   /**
@@ -1094,16 +1163,18 @@ export class SpaceScene {
           this.rocketMesh.rotation.set(Math.PI / 2, 0, -orbitAngle);
         } else if (target === 'lunar_transit') {
           const startPos = new THREE.Vector3(0, 120, 0);
-          const endPos = new THREE.Vector3(-85, 80, -95); // Settles directly at lunar arrival mesh
+          const endPos = new THREE.Vector3(-110, 102, -120); // Settles directly over the top of the round Moon globe mesh
           const currentPos = new THREE.Vector3().lerpVectors(startPos, endPos, Math.min(1, transitT));
           this.rocketMesh.position.copy(currentPos);
-          this.rocketMesh.rotation.set(0.6, 0.4, 0);
+          // Perfectly stable heading toward target without spinning or roll oscillation
+          this.rocketMesh.rotation.set(0.45, 0.25, 0);
         } else if (target === 'mars_transfer') {
           const startPos = new THREE.Vector3(0, 120, 0);
-          const endPos = new THREE.Vector3(105, 45, -135); // Settles directly at Mars arrival mesh
+          const endPos = new THREE.Vector3(130, 78, -160); // Settles directly over the top of the round Mars globe mesh
           const currentPos = new THREE.Vector3().lerpVectors(startPos, endPos, Math.min(1, transitT));
           this.rocketMesh.position.copy(currentPos);
-          this.rocketMesh.rotation.set(0.4, -0.6, 0.2);
+          // Perfectly stable heading toward target without spinning or roll oscillation
+          this.rocketMesh.rotation.set(0.45, -0.25, 0);
         }
       }
     }
@@ -1163,7 +1234,7 @@ export class SpaceScene {
 
     if (this.launchCameraAngle === 'pad') {
       if (p <= 0.25) {
-        this.camera.position.set(basePadX + 18, 4, 18);
+        this.camera.position.set(basePadX + 42, 14, 42);
       } else if (p <= 0.65) {
         this.camera.position.set(basePadX + 35, rocketPos.y * 0.4 + 6, 35);
       } else {
@@ -1208,6 +1279,9 @@ export class SpaceScene {
   public setAutoLaunch(active: boolean, durationSec = 6.8): void {
     this.autoLaunchActive = active;
     this.autoLaunchDurationSec = durationSec;
+    if (active) {
+      aerospaceAudio.playRealRocketLaunchSound();
+    }
     this.callbacks.onAutoLaunchStateChange?.(active);
   }
 

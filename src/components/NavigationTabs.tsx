@@ -21,17 +21,11 @@ interface NavigationTabsProps {
 export const NavigationTabs: React.FC<NavigationTabsProps> = ({
   currentView,
   onSelectView,
-  discoveriesCount = 0,
 }) => {
   const tabs: { id: ViewMode; label: string; icon: React.ReactNode; badge?: number }[] = [
-    { id: 'mission-control', label: 'Mission Control', icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
-    { id: 'launch-simulator', label: 'Space Launch', icon: <Rocket className="w-3.5 h-3.5" /> },
-    { id: 'solar-system', label: 'Solar System', icon: <Orbit className="w-3.5 h-3.5" /> },
-    { id: 'moon', label: 'Moon Rover Drive', icon: <Moon className="w-3.5 h-3.5" /> },
-    { id: 'mars', label: 'Mars Rover Drive', icon: <Flame className="w-3.5 h-3.5" /> },
-    { id: 'archive', label: 'NASA Archive Search', icon: <Search className="w-3.5 h-3.5" /> },
-    { id: 'discoveries', label: 'My Discoveries', icon: <Bookmark className="w-3.5 h-3.5" />, badge: discoveriesCount },
-    { id: 'settings', label: 'Settings', icon: <Sliders className="w-3.5 h-3.5" /> },
+    { id: 'launch-simulator', label: 'Space Launch (স্পেস লঞ্চ)', icon: <Rocket className="w-3.5 h-3.5" /> },
+    { id: 'solar-system', label: 'Solar System (সৌরজগৎ)', icon: <Orbit className="w-3.5 h-3.5" /> },
+    { id: 'archive', label: 'NASA Archive Search (নাসা আর্কাইভ)', icon: <Search className="w-3.5 h-3.5" /> },
   ];
 
   return (

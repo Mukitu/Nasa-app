@@ -1,5 +1,11 @@
 import * as THREE from 'three';
 import { SurfaceWaypoint, RoverTelemetry, RoverCameraMode, GraphicsQuality } from '../types/simulation';
+import {
+  createSpacecraftTileTexture,
+  createSolarPanelTexture,
+  createMissionMarkingsTexture,
+  createMarsParachuteTexture,
+} from './textures';
 
 export interface SurfaceSceneCallbacks {
   onTelemetryUpdate?: (telemetry: RoverTelemetry) => void;
@@ -28,6 +34,15 @@ export class SurfaceExplorerScene {
   private beaconsGroup: THREE.Group = new THREE.Group();
   private wheelTracksGroup: THREE.Group = new THREE.Group();
   private earthMesh: THREE.Mesh | null = null;
+
+  // Live Surface Landing Sequence
+  private isLandingSequenceActive: boolean = false;
+  private landingStartTime: number = 0;
+  private landingOnCompleteCallback: (() => void) | null = null;
+  private landedSpacecraftGroup: THREE.Group | null = null;
+  private landingParachuteGroup: THREE.Group | null = null;
+  private thrusterFlames: THREE.Mesh[] = [];
+  private flameMaterial: THREE.MeshBasicMaterial | null = null;
 
   // Rover Model & Parts
   private roverGroup: THREE.Group = new THREE.Group();
@@ -144,6 +159,7 @@ export class SurfaceExplorerScene {
     // 3. Build Environment, Tracks & Rover
     this.buildLightingAndAtmosphere();
     this.buildProceduralTerrain();
+    this.buildLandedSpacecraft();
     this.buildScatteredRocks();
     this.initWheelTracks();
     this.initRouteLine();
@@ -463,6 +479,345 @@ export class SurfaceExplorerScene {
     this.scene.add(this.terrainMesh);
   }
 
+  /**
+   * Builds detailed physical 3D Landed Spacecraft / Rocket on the Moon/Mars surface
+   * at the exact touchdown landing site right behind the rover.
+   */
+  private buildLandedSpacecraft(): void {
+    const isMoon = this.environment === 'moon';
+    const landerGroup = new THREE.Group();
+
+    const landerX = 0;
+    const landerZ = 14;
+    const landerY = this.getTerrainHeight(landerX, landerZ);
+
+    landerGroup.position.set(landerX, landerY, landerZ);
+
+    const tileTex = createSpacecraftTileTexture();
+    const solarTex = createSolarPanelTexture();
+    const markingsTex = createMissionMarkingsTexture();
+
+    const thermalMat = new THREE.MeshStandardMaterial({
+      map: tileTex,
+      color: 0xf8fafc,
+      roughness: 0.35,
+      metalness: 0.2,
+    });
+    const titaniumMat = new THREE.MeshStandardMaterial({
+      color: 0x334155,
+      roughness: 0.4,
+      metalness: 0.8,
+    });
+    const goldFoilMat = new THREE.MeshStandardMaterial({
+      color: 0xd97706,
+      roughness: 0.25,
+      metalness: 0.85,
+    });
+    const markingsMat = new THREE.MeshStandardMaterial({ map: markingsTex, roughness: 0.3 });
+
+    // 1. Core White Cylindrical Body (ECHOES OF SPACE Rocket Stage)
+    const bodyGeo = new THREE.CylinderGeometry(2.2, 2.6, 7.5, 24);
+    const bodyMesh = new THREE.Mesh(bodyGeo, thermalMat);
+    bodyMesh.position.y = 4.8;
+    bodyMesh.castShadow = true;
+    bodyMesh.receiveShadow = true;
+    landerGroup.add(bodyMesh);
+
+    // 2. Conical Nose Fairing with "ECHOES OF SPACE" insignia
+    const fairingGeo = new THREE.CylinderGeometry(2.25, 2.25, 2.5, 24);
+    const fairingMesh = new THREE.Mesh(fairingGeo, markingsMat);
+    fairingMesh.position.y = 9.8;
+    fairingMesh.castShadow = true;
+    landerGroup.add(fairingMesh);
+
+    // 3. Extended Solar Panel Wings
+    const solarMat = new THREE.MeshStandardMaterial({ map: solarTex, roughness: 0.2, metalness: 0.7 });
+    const panelGeo = new THREE.BoxGeometry(0.12, 4.2, 1.8);
+
+    const leftPanel = new THREE.Mesh(panelGeo, solarMat);
+    leftPanel.position.set(-3.2, 6.2, 0);
+    leftPanel.rotation.z = -0.15;
+    leftPanel.castShadow = true;
+    landerGroup.add(leftPanel);
+
+    const rightPanel = new THREE.Mesh(panelGeo, solarMat);
+    rightPanel.position.set(3.2, 6.2, 0);
+    rightPanel.rotation.z = 0.15;
+    rightPanel.castShadow = true;
+    landerGroup.add(rightPanel);
+
+    // 4. Gold Foil Base Descent Stage
+    const baseStageGeo = new THREE.CylinderGeometry(2.8, 3.4, 2.2, 8);
+    const baseStageMesh = new THREE.Mesh(baseStageGeo, goldFoilMat);
+    baseStageMesh.position.y = 1.1;
+    baseStageMesh.castShadow = true;
+    baseStageMesh.receiveShadow = true;
+    landerGroup.add(baseStageMesh);
+
+    // 5. Heavy-Duty Landing Struts & Footpads
+    for (let i = 0; i < 4; i++) {
+      const angle = (i * Math.PI) / 2 + Math.PI / 4;
+      const strutLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 3.8, 12), titaniumMat);
+      strutLeg.position.set(Math.cos(angle) * 3.2, 0.8, Math.sin(angle) * 3.2);
+      strutLeg.rotation.z = Math.cos(angle) * 0.45;
+      strutLeg.rotation.x = Math.sin(angle) * 0.45;
+      strutLeg.castShadow = true;
+      landerGroup.add(strutLeg);
+
+      const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.12, 16), goldFoilMat);
+      pad.position.set(Math.cos(angle) * 4.2, 0.06, Math.sin(angle) * 4.2);
+      pad.receiveShadow = true;
+      landerGroup.add(pad);
+    }
+
+    // 6. Retro-Thruster Nozzles & Glowing Flame Plumes for live descent
+    this.thrusterFlames = [];
+    this.flameMaterial = new THREE.MeshBasicMaterial({
+      color: isMoon ? 0x38bdf8 : 0xf97316,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+    });
+    const flameConeGeo = new THREE.ConeGeometry(0.6, 3.5, 12);
+    for (let i = 0; i < 4; i++) {
+      const angle = (i * Math.PI) / 2 + Math.PI / 4;
+      const flame = new THREE.Mesh(flameConeGeo, this.flameMaterial);
+      flame.position.set(Math.cos(angle) * 2.2, -1.8, Math.sin(angle) * 2.2);
+      flame.rotation.x = Math.PI;
+      landerGroup.add(flame);
+      this.thrusterFlames.push(flame);
+    }
+
+    // 7. Scorch Mark Ground Impact Ring underneath spacecraft
+    const scorchGeo = new THREE.RingGeometry(0.5, 6.2, 32);
+    scorchGeo.rotateX(-Math.PI / 2);
+    const scorchMat = new THREE.MeshBasicMaterial({
+      color: isMoon ? 0x0f172a : 0x451a03,
+      transparent: true,
+      opacity: 0.75,
+      side: THREE.DoubleSide,
+    });
+    const scorchRing = new THREE.Mesh(scorchGeo, scorchMat);
+    scorchRing.position.y = 0.02;
+    landerGroup.add(scorchRing);
+
+    // 8. Navigation Light Beacon at top
+    const beaconLight = new THREE.PointLight(isMoon ? 0x38bdf8 : 0xf59e0b, 3.5, 25);
+    beaconLight.position.set(0, 11.5, 0);
+    landerGroup.add(beaconLight);
+
+    this.landedSpacecraftGroup = landerGroup;
+    this.scene.add(landerGroup);
+
+    // Build Parachute Canopy Group
+    this.buildLandingParachute();
+
+    // Physical collision obstacle for landed spacecraft
+    this.rockObstacles.push({
+      x: landerX,
+      z: landerZ,
+      radius: 4.8,
+    });
+  }
+
+  /**
+   * Builds parachute canopy for atmospheric descent on the target surface map
+   */
+  private buildLandingParachute(): void {
+    const isMoon = this.environment === 'moon';
+    const parachuteGroup = new THREE.Group();
+
+    const chuteTex = createMarsParachuteTexture();
+    const chuteGeo = new THREE.SphereGeometry(7.5, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    const chuteMat = new THREE.MeshStandardMaterial({
+      map: chuteTex,
+      side: THREE.DoubleSide,
+      roughness: 0.5,
+      color: isMoon ? 0x38bdf8 : 0xffffff,
+    });
+    const chuteCanopy = new THREE.Mesh(chuteGeo, chuteMat);
+    chuteCanopy.rotation.x = Math.PI;
+    parachuteGroup.add(chuteCanopy);
+
+    const lineMat = new THREE.LineBasicMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.85 });
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      const pts = [
+        new THREE.Vector3(Math.cos(a) * 7.2, 0, Math.sin(a) * 7.2),
+        new THREE.Vector3(0, -14, 0),
+      ];
+      const lineGeo = new THREE.BufferGeometry().setFromPoints(pts);
+      parachuteGroup.add(new THREE.Line(lineGeo, lineMat));
+    }
+
+    parachuteGroup.visible = false;
+    this.landingParachuteGroup = parachuteGroup;
+    this.scene.add(parachuteGroup);
+  }
+
+  /**
+   * Triggers live landing sequence directly on top of the surface terrain map
+   */
+  public triggerLandingSequence(onComplete?: () => void): void {
+    this.isLandingSequenceActive = true;
+    this.landingStartTime = performance.now();
+    this.landingOnCompleteCallback = onComplete || null;
+
+    const landerBaseY = this.getTerrainHeight(0, 14);
+
+    if (this.landedSpacecraftGroup) {
+      this.landedSpacecraftGroup.position.set(0, landerBaseY + 65, 14);
+      this.landedSpacecraftGroup.visible = true;
+    }
+
+    if (this.landingParachuteGroup) {
+      this.landingParachuteGroup.position.set(0, landerBaseY + 81, 14);
+      this.landingParachuteGroup.visible = true;
+    }
+
+    // Position rover under lander initially
+    this.roverPosition.set(0, landerBaseY + 65.5, 14);
+    this.roverHeading = 0;
+    this.currentSpeed = 0;
+    this.roverGroup.position.copy(this.roverPosition);
+
+    // Initial high descent tracking camera
+    this.camera.position.set(0, landerBaseY + 72, 45);
+    this.camera.lookAt(0, landerBaseY + 58, 14);
+  }
+
+  /**
+   * Skips landing sequence and places spacecraft & rover immediately on driving map
+   */
+  public skipLandingSequence(): void {
+    if (!this.isLandingSequenceActive) return;
+    this.isLandingSequenceActive = false;
+    const landerBaseY = this.getTerrainHeight(0, 14);
+
+    if (this.landedSpacecraftGroup) {
+      this.landedSpacecraftGroup.position.set(0, landerBaseY, 14);
+    }
+    if (this.landingParachuteGroup) {
+      this.landingParachuteGroup.visible = false;
+    }
+    if (this.flameMaterial) {
+      this.flameMaterial.opacity = 0;
+    }
+
+    const startZ = 0;
+    const startY = this.getTerrainHeight(0, startZ);
+    this.roverPosition.set(0, startY + 0.55, startZ);
+    this.roverGroup.position.copy(this.roverPosition);
+    this.cameraMode = 'follow';
+
+    const callback = this.landingOnCompleteCallback;
+    this.landingOnCompleteCallback = null;
+    callback?.();
+  }
+
+  /**
+   * Updates live touchdown descent animation frame-by-frame on surface map
+   */
+  private updateLandingSequence(): void {
+    if (!this.isLandingSequenceActive) return;
+
+    const elapsed = (performance.now() - this.landingStartTime) / 1000;
+    const landerBaseY = this.getTerrainHeight(0, 14);
+
+    if (elapsed < 3.0) {
+      // Stage 1: Descent from high sky over surface map with parachute
+      const progress = elapsed / 3.0;
+      const currentY = landerBaseY + 65 - progress * 40; // 65 -> 25
+
+      if (this.landedSpacecraftGroup) {
+        this.landedSpacecraftGroup.position.set(0, currentY, 14);
+      }
+      if (this.landingParachuteGroup) {
+        this.landingParachuteGroup.position.set(0, currentY + 16, 14);
+      }
+      this.roverPosition.set(0, currentY + 0.5, 14);
+      this.roverGroup.position.copy(this.roverPosition);
+
+      if (this.flameMaterial) {
+        this.flameMaterial.opacity = 0.35 + Math.sin(elapsed * 12) * 0.2;
+      }
+
+      this.camera.position.set(0, currentY + 14, 42);
+      this.camera.lookAt(0, currentY, 14);
+    } else if (elapsed < 6.5) {
+      // Stage 2: Powered Retro-Burn to Touchdown
+      const progress = (elapsed - 3.0) / 3.5;
+      const currentY = landerBaseY + 25 - progress * 25; // 25 -> 0 (ground)
+
+      if (this.landedSpacecraftGroup) {
+        this.landedSpacecraftGroup.position.set(0, currentY, 14);
+      }
+      if (this.landingParachuteGroup) {
+        this.landingParachuteGroup.position.set(0, currentY + 16, 14);
+      }
+      this.roverPosition.set(0, currentY + 0.5, 14);
+      this.roverGroup.position.copy(this.roverPosition);
+
+      if (this.flameMaterial) {
+        this.flameMaterial.opacity = progress > 0.95 ? 0 : 0.85 + Math.sin(elapsed * 20) * 0.15;
+      }
+
+      if (this.dustParticles && progress > 0.6) {
+        (this.dustParticles.material as THREE.PointsMaterial).opacity = (progress - 0.6) * 2.2;
+        this.dustParticles.position.set(0, landerBaseY, 14);
+      }
+
+      this.camera.position.set(12, Math.max(landerBaseY + 4, currentY + 6), 32);
+      this.camera.lookAt(0, currentY + 2, 14);
+    } else if (elapsed < 9.0) {
+      // Stage 3: Touchdown Confirmed, Parachute Jettisons, Rover Rollout to (0, 0, 0)
+      if (this.landedSpacecraftGroup) {
+        this.landedSpacecraftGroup.position.set(0, landerBaseY, 14);
+      }
+      if (this.flameMaterial) {
+        this.flameMaterial.opacity = 0;
+      }
+      if (this.landingParachuteGroup) {
+        const pProgress = (elapsed - 6.5) / 2.5;
+        this.landingParachuteGroup.position.set(pProgress * 15, landerBaseY + 16 - pProgress * 10, 14 - pProgress * 8);
+      }
+
+      const rolloutProgress = (elapsed - 6.5) / 2.5;
+      const rolloutZ = 14 - rolloutProgress * 14; // 14 -> 0
+      const terrainY = this.getTerrainHeight(0, rolloutZ);
+
+      this.roverPosition.set(0, terrainY + 0.55, rolloutZ);
+      this.roverGroup.position.copy(this.roverPosition);
+
+      const wheelRot = rolloutProgress * Math.PI * 6;
+      this.wheelMeshes.forEach((w) => {
+        w.rotation.x = wheelRot;
+      });
+
+      this.camera.position.set(8, terrainY + 4, rolloutZ + 12);
+      this.camera.lookAt(0, terrainY + 1, rolloutZ);
+    } else {
+      // Stage 4: Touchdown Complete & Direct Rover Control Unlocked!
+      if (this.landedSpacecraftGroup) {
+        this.landedSpacecraftGroup.position.set(0, landerBaseY, 14);
+      }
+      if (this.landingParachuteGroup) {
+        this.landingParachuteGroup.visible = false;
+      }
+      const startZ = 0;
+      const startY = this.getTerrainHeight(0, startZ);
+      this.roverPosition.set(0, startY + 0.55, startZ);
+      this.roverGroup.position.copy(this.roverPosition);
+
+      this.isLandingSequenceActive = false;
+      this.cameraMode = 'follow';
+
+      const callback = this.landingOnCompleteCallback;
+      this.landingOnCompleteCallback = null;
+      callback?.();
+    }
+  }
+
   private rockObstacles: { x: number; z: number; radius: number }[] = [];
 
   private buildScatteredRocks(): void {
@@ -755,11 +1110,13 @@ export class SurfaceExplorerScene {
   }
 
   private buildRoverModel(): void {
+    const tileTex = createSpacecraftTileTexture();
     this.roverChassis = new THREE.Mesh(
       new THREE.BoxGeometry(1.6, 0.65, 2.3),
       new THREE.MeshStandardMaterial({
-        color: 0xe2e8f0,
-        metalness: 0.65,
+        map: tileTex,
+        color: 0xf8fafc,
+        metalness: 0.2,
         roughness: 0.35,
       })
     );
@@ -1292,16 +1649,20 @@ export class SurfaceExplorerScene {
       this.animationFrameId = requestAnimationFrame(animate);
       const delta = Math.min(0.1, clock.getDelta());
 
-      if (!this.isPaused) {
-        // 1. Rover Driving Physics
-        this.updateRoverPhysics(delta);
+      if (this.isLandingSequenceActive) {
+        this.updateLandingSequence();
+      } else {
+        if (!this.isPaused) {
+          // 1. Rover Driving Physics
+          this.updateRoverPhysics(delta);
 
-        // 2. Visible Wheel Tracks
-        this.updateWheelTracks();
+          // 2. Visible Wheel Tracks
+          this.updateWheelTracks();
+        }
+
+        // 3. Camera Tracking
+        this.updateCamera(delta);
       }
-
-      // 3. Camera Tracking
-      this.updateCamera(delta);
 
       // 4. Waypoint Proximity Check & Beacons Animation
       this.updateProximityAndBeacons(clock.getElapsedTime());

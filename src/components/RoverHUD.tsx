@@ -32,6 +32,7 @@ import {
   Info,
   CheckCircle2,
   Volume2,
+  Rocket,
 } from 'lucide-react';
 
 interface RoverHUDProps {
@@ -52,6 +53,7 @@ interface RoverHUDProps {
   onSwitchEnvironment: (env: 'moon' | 'mars') => void;
   onResetRover: () => void;
   onReturnToMissionControl: () => void;
+  onLaunchNewMission?: () => void;
   onInspectAnomaly: (waypoint: SurfaceWaypoint) => void;
   onOpenDiscoveriesCatalog: () => void;
   onVirtualControl: (forward: number, turn: number, brake: boolean) => void;
@@ -75,6 +77,7 @@ export const RoverHUD: React.FC<RoverHUDProps> = ({
   onSwitchEnvironment,
   onResetRover,
   onReturnToMissionControl,
+  onLaunchNewMission,
   onInspectAnomaly,
   onOpenDiscoveriesCatalog,
   onVirtualControl,
@@ -171,6 +174,19 @@ export const RoverHUD: React.FC<RoverHUDProps> = ({
             >
               Mars
             </button>
+
+            <div className="h-4 w-px bg-slate-700/60 mx-0.5" />
+
+            {onLaunchNewMission && (
+              <button
+                onClick={onLaunchNewMission}
+                className="px-2.5 py-1 rounded text-[11px] font-tech font-bold uppercase transition-all cursor-pointer bg-sky-500 hover:bg-sky-400 text-slate-950 flex items-center gap-1 shadow-md active:scale-95"
+                title="Launch a New Mission from Launch Pad"
+              >
+                <Rocket className="w-3 h-3 text-slate-950 shrink-0" />
+                <span>Launch Mission</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -634,6 +650,17 @@ export const RoverHUD: React.FC<RoverHUDProps> = ({
             >
               <RotateCcw className="w-4 h-4" />
             </button>
+
+            {/* Launch New Space Mission */}
+            {onLaunchNewMission && (
+              <button
+                onClick={onLaunchNewMission}
+                className="p-1.5 rounded-lg glass-panel text-sky-400 hover:text-sky-300 border border-sky-500/40 bg-sky-500/10 transition-colors cursor-pointer"
+                title="Launch a New Mission from Space Launch Pad"
+              >
+                <Rocket className="w-4 h-4 text-sky-400" />
+              </button>
+            )}
 
             {/* Return to Mission Control */}
             <button

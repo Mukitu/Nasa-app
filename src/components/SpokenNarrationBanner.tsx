@@ -14,6 +14,7 @@ import {
   Search,
   Radio,
   Compass,
+  Bot,
 } from 'lucide-react';
 
 interface SpokenNarrationBannerProps {
@@ -69,13 +70,13 @@ export const SpokenNarrationBanner: React.FC<SpokenNarrationBannerProps> = ({
         <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2">
           <div className="flex items-center gap-2">
             <div className="relative flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/50 shrink-0">
-              <Radio className="w-3.5 h-3.5 animate-pulse" />
+              <Bot className="w-3.5 h-3.5 text-emerald-300 animate-pulse" />
             </div>
 
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[10px] font-mono-tech uppercase font-bold tracking-wider text-emerald-300">
-                  {isNearby ? `HISTORICAL EQUIPMENT DETECTED (${nearestDistance}M)` : 'MISSION NARRATOR • SPOKEN ARCHIVE'}
+                  {isNearby ? `AI ROBOT GUIDE • EQUIPMENT NEARBY (${nearestDistance}M)` : 'AI ROBOT GUIDE • VOICE NARRATION'}
                 </span>
                 <span className="text-[9px] font-mono-tech px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/30">
                   Landed {activeWaypoint.landingYear}

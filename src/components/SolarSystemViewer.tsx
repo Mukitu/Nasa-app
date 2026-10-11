@@ -22,19 +22,37 @@ export const SolarSystemViewer: React.FC<SolarSystemViewerProps> = ({
   const [detailsCollapsed, setDetailsCollapsed] = useState(false);
   const currentBody = CELESTIAL_BODIES[selectedPlanetId] || CELESTIAL_BODIES.earth;
 
-  const bodiesList = Object.values(CELESTIAL_BODIES);
-  const currentIndex = bodiesList.findIndex((p) => p.id === selectedPlanetId);
+  const [activeCategory, setActiveCategory] = useState<'all' | 'planets' | 'moons' | 'satellites'>('all');
+
+  const allBodiesList = Object.values(CELESTIAL_BODIES);
+
+  const filteredBodies = allBodiesList.filter((b) => {
+    if (activeCategory === 'planets') {
+      return b.type.includes('Star') || b.type.includes('Planet');
+    }
+    if (activeCategory === 'moons') {
+      return b.type.includes('Moon');
+    }
+    if (activeCategory === 'satellites') {
+      return b.type.includes('Station') || b.type.includes('Telescope') || b.type.includes('Satellite') || b.type.includes('Probe');
+    }
+    return true;
+  });
+
+  const currentIndex = filteredBodies.findIndex((p) => p.id === selectedPlanetId);
 
   const handlePrevPlanet = () => {
-    const prevIdx = (currentIndex - 1 + bodiesList.length) % bodiesList.length;
-    const target = bodiesList[prevIdx].id as PlanetId;
+    const list = filteredBodies.length > 0 ? filteredBodies : allBodiesList;
+    const prevIdx = (currentIndex - 1 + list.length) % list.length;
+    const target = list[prevIdx].id as PlanetId;
     onSelectPlanet(target);
     onFocusCamera(target);
   };
 
   const handleNextPlanet = () => {
-    const nextIdx = (currentIndex + 1) % bodiesList.length;
-    const target = bodiesList[nextIdx].id as PlanetId;
+    const list = filteredBodies.length > 0 ? filteredBodies : allBodiesList;
+    const nextIdx = (currentIndex + 1) % list.length;
+    const target = list[nextIdx].id as PlanetId;
     onSelectPlanet(target);
     onFocusCamera(target);
   };
@@ -85,7 +103,7 @@ export const SolarSystemViewer: React.FC<SolarSystemViewerProps> = ({
         className="absolute bottom-3 left-3 right-3 sm:left-6 sm:right-6 z-10 flex flex-col items-center pointer-events-none select-none"
       >
         {/* 1. Detail Card for selected body (Collapsible so it never blocks the scene) */}
-        <div className="pointer-events-auto w-full max-w-4xl glass-panel rounded-xl shadow-2xl p-3 sm:p-4 mb-2.5 border border-sky-500/25 transition-all">
+        <div className="pointer-events-auto w-full max-w-4xl glass-panel rounded-xl shadow-2xl p-3 sm:p-4 mb-2 border border-sky-500/25 transition-all">
           <div className="flex items-center justify-between gap-2 border-b border-slate-700/60 pb-2.5">
             <div className="flex items-center gap-2.5">
               <div
@@ -192,57 +210,89 @@ export const SolarSystemViewer: React.FC<SolarSystemViewerProps> = ({
           )}
         </div>
 
-        {/* 2. Celestial & Satellite Selection Bar ("Space List" / স্পেস লিস্ট - Always firmly anchored) */}
-        <div className="pointer-events-auto w-full max-w-4xl glass-panel rounded-xl p-1.5 flex items-center gap-1 border border-sky-500/25 shadow-2xl">
-          {/* Previous Planet Button */}
-          <button
-            onClick={handlePrevPlanet}
-            className="p-2 text-slate-400 hover:text-sky-300 hover:bg-slate-800/60 rounded transition-colors cursor-pointer shrink-0"
-            title="Previous celestial body"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-
-          {/* Scrollable Celestial Bodies & Moons & Probes List */}
-          <div className="flex-1 overflow-x-auto custom-scrollbar flex items-center gap-1 py-0.5">
-            {bodiesList.map((body) => {
-              const isSelected = selectedPlanetId === body.id;
-              return (
+        {/* 2. Celestial Category Filter Tabs + Celestial List Bar */}
+        <div className="pointer-events-auto w-full max-w-4xl glass-panel rounded-xl p-1.5 flex flex-col gap-1.5 border border-sky-500/25 shadow-2xl">
+          {/* Category Pills */}
+          <div className="flex items-center justify-between px-1 text-[10px] font-mono-tech border-b border-slate-800/80 pb-1">
+            <div className="flex items-center gap-1">
+              {(
+                [
+                  { key: 'all', label: 'All Objects' },
+                  { key: 'planets', label: 'Planets & Sun' },
+                  { key: 'moons', label: 'Moons' },
+                  { key: 'satellites', label: 'Satellites & Probes' },
+                ] as const
+              ).map((cat) => (
                 <button
-                  key={body.id}
-                  onClick={() => {
-                    onSelectPlanet(body.id as PlanetId);
-                    onFocusCamera(body.id as PlanetId);
-                  }}
-                  className={`flex-1 min-w-[76px] sm:min-w-[88px] flex flex-col items-center py-1.5 px-1.5 rounded-lg transition-all cursor-pointer border shrink-0 ${
-                    isSelected
-                      ? 'bg-sky-500/25 border-sky-400 text-white font-semibold shadow-xs'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 border-transparent'
+                  key={cat.key}
+                  onClick={() => setActiveCategory(cat.key)}
+                  className={`px-2 py-0.5 rounded transition-all cursor-pointer font-bold ${
+                    activeCategory === cat.key
+                      ? 'bg-sky-500 text-slate-950 font-bold shadow-xs'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                   }`}
                 >
-                  <div
-                    className="w-2.5 h-2.5 rounded-full mb-1 transition-transform"
-                    style={{
-                      backgroundColor: body.colorHex,
-                      boxShadow: isSelected ? `0 0 8px ${body.colorHex}` : 'none',
-                    }}
-                  />
-                  <span className="font-tech text-[10px] sm:text-[11px] uppercase tracking-wider truncate w-full text-center">
-                    {body.name.split(' ')[0]}
-                  </span>
+                  {cat.label}
                 </button>
-              );
-            })}
+              ))}
+            </div>
+
+            <span className="text-slate-400 hidden sm:inline">
+              Showing {filteredBodies.length} celestial targets
+            </span>
           </div>
 
-          {/* Next Planet Button */}
-          <button
-            onClick={handleNextPlanet}
-            className="p-2 text-slate-400 hover:text-sky-300 hover:bg-slate-800/60 rounded transition-colors cursor-pointer shrink-0"
-            title="Next celestial body"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            {/* Previous Button */}
+            <button
+              onClick={handlePrevPlanet}
+              className="p-2 text-slate-400 hover:text-sky-300 hover:bg-slate-800/60 rounded transition-colors cursor-pointer shrink-0"
+              title="Previous celestial target"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {/* Scrollable List */}
+            <div className="flex-1 overflow-x-auto custom-scrollbar flex items-center gap-1 py-0.5">
+              {filteredBodies.map((body) => {
+                const isSelected = selectedPlanetId === body.id;
+                return (
+                  <button
+                    key={body.id}
+                    onClick={() => {
+                      onSelectPlanet(body.id as PlanetId);
+                      onFocusCamera(body.id as PlanetId);
+                    }}
+                    className={`flex-1 min-w-[80px] sm:min-w-[92px] flex flex-col items-center py-1.5 px-1.5 rounded-lg transition-all cursor-pointer border shrink-0 ${
+                      isSelected
+                        ? 'bg-sky-500/25 border-sky-400 text-white font-semibold shadow-xs'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 border-transparent'
+                    }`}
+                  >
+                    <div
+                      className="w-2.5 h-2.5 rounded-full mb-1 transition-transform"
+                      style={{
+                        backgroundColor: body.colorHex,
+                        boxShadow: isSelected ? `0 0 8px ${body.colorHex}` : 'none',
+                      }}
+                    />
+                    <span className="font-tech text-[10px] sm:text-[11px] uppercase tracking-wider truncate w-full text-center">
+                      {body.name.split(' ')[0]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Next Button */}
+            <button
+              onClick={handleNextPlanet}
+              className="p-2 text-slate-400 hover:text-sky-300 hover:bg-slate-800/60 rounded transition-colors cursor-pointer shrink-0"
+              title="Next celestial target"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     </>

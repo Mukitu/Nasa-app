@@ -6,6 +6,7 @@ import {
   LaunchChecklistState,
 } from '../types/simulation';
 import { SPACECRAFT_FLEET } from '../data/planets';
+import { aerospaceAudio } from '../utils/audio';
 import {
   Rocket,
   CheckCircle2,
@@ -259,7 +260,10 @@ export const LaunchPreparationModule: React.FC<LaunchPreparationModuleProps> = (
               </button>
             ) : (
               <button
-                onClick={onToggleAutoLaunch}
+                onClick={() => {
+                  onToggleAutoLaunch();
+                  if (!autoLaunchActive) aerospaceAudio.playRealRocketLaunchSound();
+                }}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded text-xs font-tech font-bold uppercase tracking-wider transition-all cursor-pointer shadow-md active:scale-95 ${
                   autoLaunchActive
                     ? 'bg-amber-400 text-slate-950 hover:bg-amber-300 animate-pulse'
@@ -530,6 +534,7 @@ export const LaunchPreparationModule: React.FC<LaunchPreparationModuleProps> = (
                       } else {
                         onToggleAutoLaunch();
                       }
+                      aerospaceAudio.playRealRocketLaunchSound();
                       setActiveTab('flight');
                     }}
                     className="w-full py-2.5 px-3 rounded text-xs font-tech font-bold uppercase tracking-wider bg-sky-400 hover:bg-sky-300 text-slate-950 transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md active:scale-95"
