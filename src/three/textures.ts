@@ -652,4 +652,263 @@ export function createMarsParachuteTexture(): THREE.CanvasTexture {
   return new THREE.CanvasTexture(canvas);
 }
 
+/** Procedural Photorealistic Earth Grass Field & Landscape Texture */
+export function createGrassFieldTexture(): THREE.CanvasTexture {
+  const size = 2048;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  // 1. Natural Earthy Base Fill (Deep Meadow Soil & Warm Olive Grass)
+  ctx.fillStyle = '#2c3e21';
+  ctx.fillRect(0, 0, size, size);
+
+  // 2. Broad Organic Turf & Meadow Noise Patches
+  const turfColors = ['#233319', '#344e27', '#2e4522', '#3e5c30', '#486838', '#537542', '#3a5328'];
+  for (let i = 0; i < 3500; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const rx = Math.random() * 45 + 10;
+    const ry = Math.random() * 35 + 8;
+    const angle = Math.random() * Math.PI;
+
+    ctx.fillStyle = turfColors[Math.floor(Math.random() * turfColors.length)];
+    ctx.beginPath();
+    ctx.ellipse(x, y, rx, ry, angle, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 3. Dry Straw, Thatch & Earthy Soil Mottling (For grounded photorealism)
+  const earthColors = ['#626d40', '#747f4f', '#423321', '#322618', '#556138'];
+  for (let i = 0; i < 1800; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const r = Math.random() * 6 + 1.5;
+    ctx.fillStyle = earthColors[Math.floor(Math.random() * earthColors.length)];
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 4. Fine High-Density Micro Grass Blade Noise
+  ctx.strokeStyle = 'rgba(110, 150, 85, 0.35)';
+  ctx.lineWidth = 1.2;
+  for (let i = 0; i < 12000; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + (Math.random() - 0.5) * 5, y - Math.random() * 6);
+    ctx.stroke();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(6, 6);
+  texture.anisotropy = 16;
+  return texture;
+}
+
+/** Procedural Photorealistic Earth Atmospheric Sky with Horizon Haze & Soft Clouds */
+export function createDaytimeSkyTexture(): THREE.CanvasTexture {
+  const width = 2048;
+  const height = 1024;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+
+  // Majestic Natural Sky Gradient: Deep Azure at top -> Warm Horizon Glow -> Ground Haze
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+  skyGrad.addColorStop(0, '#1d4ed8');     // Zenith rich azure blue
+  skyGrad.addColorStop(0.35, '#2563eb');  // Atmosphere blue
+  skyGrad.addColorStop(0.60, '#60a5fa');  // Light sky cyan
+  skyGrad.addColorStop(0.82, '#93c5fd');  // Atmosphere scatter glow
+  skyGrad.addColorStop(0.94, '#bfdbfe');  // Soft horizon haze
+  skyGrad.addColorStop(1.0, '#dbeafe');   // Ground atmospheric boundary
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, width, height);
+
+  // Soft Layered Wispy Cirrus & Cumulus Cloud Belts near Horizon
+  for (let i = 0; i < 160; i++) {
+    const cx = Math.random() * width;
+    const cy = height * 0.58 + (Math.random() - 0.2) * height * 0.35;
+    const rx = Math.random() * 220 + 60;
+    const ry = Math.random() * 28 + 8;
+    const alpha = Math.random() * 0.35 + 0.15;
+
+    const cloudGrad = ctx.createRadialGradient(cx, cy, 2, cx, cy, rx);
+    cloudGrad.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+    cloudGrad.addColorStop(0.6, `rgba(241, 245, 249, ${alpha * 0.6})`);
+    cloudGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+    ctx.fillStyle = cloudGrad;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Realistic Soft Sun Disc with Natural Atmospheric Dispersion Flare
+  const sunX = width * 0.68;
+  const sunY = height * 0.35;
+  const sunGrad = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, 320);
+  sunGrad.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
+  sunGrad.addColorStop(0.15, 'rgba(254, 240, 138, 0.85)');
+  sunGrad.addColorStop(0.45, 'rgba(186, 230, 253, 0.35)');
+  sunGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = sunGrad;
+  ctx.beginPath();
+  ctx.arc(sunX, sunY, 320, 0, Math.PI * 2);
+  ctx.fill();
+
+  const texture = new THREE.CanvasTexture(canvas);
+  return texture;
+}
+
+/** Procedural Photorealistic Rocket Engine Flame & Plume Gradient Texture */
+export function createUltraRealFlameTexture(): THREE.CanvasTexture {
+  const width = 512;
+  const height = 1024;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+
+  // 1. Incandescent Vertical Fire Column Gradient
+  const flameGrad = ctx.createLinearGradient(0, 0, 0, height);
+  flameGrad.addColorStop(0, '#ffffff');        // Pure white-hot nozzle output
+  flameGrad.addColorStop(0.08, '#fef08a');     // Brilliant electric yellow
+  flameGrad.addColorStop(0.25, '#fb923c');     // Intensely glowing orange shock plasma
+  flameGrad.addColorStop(0.55, '#f97316');     // Fiery turbulent combustion
+  flameGrad.addColorStop(0.82, '#dc2626');     // Deep crimson thermal exhaust
+  flameGrad.addColorStop(1.0, 'rgba(127, 29, 29, 0)'); // Dissipating dark red thermal plume
+  ctx.fillStyle = flameGrad;
+  ctx.fillRect(0, 0, width, height);
+
+  // 2. Radial Core Heat Beam
+  const cx = width / 2;
+  const coreGrad = ctx.createRadialGradient(cx, 100, 10, cx, height / 2, width / 2);
+  coreGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+  coreGrad.addColorStop(0.3, 'rgba(254, 215, 170, 0.7)');
+  coreGrad.addColorStop(0.7, 'rgba(249, 115, 22, 0.3)');
+  coreGrad.addColorStop(1, 'rgba(220, 38, 38, 0)');
+  ctx.fillStyle = coreGrad;
+  ctx.fillRect(0, 0, width, height);
+
+  // 3. Turbulent Fire Plume Noise Strokes
+  for (let i = 0; i < 400; i++) {
+    const x = cx + (Math.random() - 0.5) * width * 0.7;
+    const y = Math.random() * height;
+    const rx = Math.random() * 24 + 6;
+    const ry = Math.random() * 80 + 20;
+    ctx.fillStyle = Math.random() > 0.4 ? 'rgba(255, 255, 255, 0.25)' : 'rgba(251, 146, 60, 0.3)';
+    ctx.beginPath();
+    ctx.ellipse(x, y, rx, ry, (Math.random() - 0.5) * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  return texture;
+}
+
+/** Supersonic Exhaust Shock Diamond / Mach Disk Ring Texture */
+export function createMachDiskTexture(): THREE.CanvasTexture {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  const cx = size / 2;
+  const cy = size / 2;
+  const ringGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, size / 2);
+  ringGrad.addColorStop(0, '#ffffff');                     // Incandescent white shock center
+  ringGrad.addColorStop(0.2, 'rgba(254, 240, 138, 0.95)'); // Yellow shock wave envelope
+  ringGrad.addColorStop(0.5, 'rgba(56, 189, 248, 0.8)');   // Supersonic electric blue pressure ring
+  ringGrad.addColorStop(0.8, 'rgba(249, 115, 22, 0.4)');   // Outer flame boundary
+  ringGrad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = ringGrad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, size / 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  return new THREE.CanvasTexture(canvas);
+}
+
+/** Metallic Industrial Diamond Treadplate Texture for Platform Decks & Steel Stairs */
+export function createSteelPlateTexture(): THREE.CanvasTexture {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  // Dark brushed steel background
+  ctx.fillStyle = '#334155';
+  ctx.fillRect(0, 0, size, size);
+
+  // Industrial tread pattern grid
+  ctx.strokeStyle = '#64748b';
+  ctx.lineWidth = 2;
+  const step = 32;
+  for (let x = 0; x < size; x += step) {
+    for (let y = 0; y < size; y += step) {
+      // Diamond tread shape
+      ctx.fillStyle = '#475569';
+      ctx.beginPath();
+      ctx.moveTo(x + step / 2, y + 4);
+      ctx.lineTo(x + step - 4, y + step / 2);
+      ctx.lineTo(x + step / 2, y + step - 4);
+      ctx.lineTo(x + 4, y + step / 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(4, 4);
+  return texture;
+}
+
+/** Yellow & Black Diagonal Safety Hazard Warning Stripe Texture */
+export function createHazardStripeTexture(): THREE.CanvasTexture {
+  const width = 512;
+  const height = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+
+  // Background yellow
+  ctx.fillStyle = '#eab308';
+  ctx.fillRect(0, 0, width, height);
+
+  // Diagonal black hazard stripes
+  ctx.fillStyle = '#0f172a';
+  const stripeWidth = 32;
+  for (let x = -height; x < width + height; x += stripeWidth * 2) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x + stripeWidth, 0);
+    ctx.lineTo(x + stripeWidth + height, height);
+    ctx.lineTo(x + height, height);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  return texture;
+}
+
+
+
 

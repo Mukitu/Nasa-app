@@ -15,6 +15,12 @@ import {
   createSpacecraftTileTexture,
   createSolarPanelTexture,
   createMissionMarkingsTexture,
+  createGrassFieldTexture,
+  createDaytimeSkyTexture,
+  createUltraRealFlameTexture,
+  createMachDiskTexture,
+  createSteelPlateTexture,
+  createHazardStripeTexture,
 } from './textures';
 import { PlanetId, GraphicsQuality, ViewMode, MissionPhase, LaunchTarget, PlanetData } from '../types/simulation';
 import { CELESTIAL_BODIES } from '../data/planets';
@@ -62,6 +68,16 @@ export class SpaceScene {
   private srbLeftMesh: THREE.Mesh | null = null;
   private srbRightMesh: THREE.Mesh | null = null;
   private rocketIgnitionLight: THREE.PointLight | null = null;
+  private rocketCoreLight: THREE.PointLight | null = null;
+  private rocketFlameGroup: THREE.Group | null = null;
+  private innerFlameMesh: THREE.Mesh | null = null;
+  private mainFlameMesh: THREE.Mesh | null = null;
+  private outerFlameMesh: THREE.Mesh | null = null;
+  private srbFlameLeft: THREE.Mesh | null = null;
+  private srbFlameRight: THREE.Mesh | null = null;
+  private shockDiamonds: THREE.Mesh[] = [];
+  private billowingFireGroup: THREE.Group | null = null;
+  private stationPlatformGroup: THREE.Group | null = null;
 
   // State
   private currentViewMode: ViewMode = 'mission-control';
@@ -549,49 +565,503 @@ export class SpaceScene {
     return group;
   }
 
+  /** Helper to build photorealistic organic 3D trees & shrubs for Earth spaceport landscape */
+  private create3DTreeMesh(type: 'deciduous' | 'conifer' | 'shrub' = 'deciduous'): THREE.Group {
+    const treeGroup = new THREE.Group();
+
+    if (type === 'shrub') {
+      // Low Coastal Bush / Shrub Cluster
+      const bushMat = new THREE.MeshStandardMaterial({
+        color: 0x385328,
+        roughness: 0.85,
+        metalness: 0.05,
+      });
+      const clusterCount = 3 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < clusterCount; i++) {
+        const r = 1.0 + Math.random() * 1.2;
+        const bush = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 1), bushMat);
+        bush.position.set(
+          (Math.random() - 0.5) * 1.8,
+          r * 0.6,
+          (Math.random() - 0.5) * 1.8
+        );
+        treeGroup.add(bush);
+      }
+      return treeGroup;
+    }
+
+    // Wood Trunk for Trees
+    const trunkGeo = new THREE.CylinderGeometry(0.35, 0.65, 4.2, 8);
+    const trunkMat = new THREE.MeshStandardMaterial({
+      color: 0x2b1d14,
+      roughness: 0.95,
+      metalness: 0.05,
+    });
+    const trunkMesh = new THREE.Mesh(trunkGeo, trunkMat);
+    trunkMesh.position.y = 2.1;
+    treeGroup.add(trunkMesh);
+
+    if (type === 'conifer') {
+      // Photorealistic Layered Pine / Fir Tree
+      const pineColors = [0x1e381b, 0x294827, 0x1b3218];
+      const layers = 4;
+      for (let l = 0; l < layers; l++) {
+        const mat = new THREE.MeshStandardMaterial({
+          color: pineColors[l % pineColors.length],
+          roughness: 0.8,
+        });
+        const radius = 2.6 - l * 0.5;
+        const height = 3.6 - l * 0.4;
+        const cone = new THREE.Mesh(new THREE.ConeGeometry(radius, height, 8), mat);
+        cone.position.y = 3.8 + l * 1.6;
+        treeGroup.add(cone);
+      }
+    } else {
+      // Photorealistic Spreading Deciduous Oak Tree
+      const leafMat1 = new THREE.MeshStandardMaterial({ color: 0x2d4822, roughness: 0.8 });
+      const leafMat2 = new THREE.MeshStandardMaterial({ color: 0x3d5f30, roughness: 0.82 });
+      const leafMat3 = new THREE.MeshStandardMaterial({ color: 0x233a1a, roughness: 0.88 });
+
+      const clusters = [
+        { size: 2.5, pos: [0, 4.8, 0], mat: leafMat1 },
+        { size: 1.9, pos: [1.2, 5.4, 0.9], mat: leafMat2 },
+        { size: 1.8, pos: [-1.1, 5.2, -0.8], mat: leafMat3 },
+        { size: 1.7, pos: [0.2, 6.4, -0.3], mat: leafMat2 },
+        { size: 1.5, pos: [-0.8, 5.8, 1.1], mat: leafMat1 },
+      ];
+
+      clusters.forEach((c) => {
+        const mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(c.size, 1), c.mat);
+        mesh.position.set(c.pos[0], c.pos[1], c.pos[2]);
+        treeGroup.add(mesh);
+      });
+    }
+
+    return treeGroup;
+  }
+
+  private createStationPlatformAndRailings(): THREE.Group {
+    const stationGroup = new THREE.Group();
+    // Positioned alongside launch pad apron and service road
+    stationGroup.position.set(18, 0, 16);
+
+    const steelTex = createSteelPlateTexture();
+    const hazardTex = createHazardStripeTexture();
+
+    // 1. Concrete Base Platform Foundation
+    const platformWidth = 14;
+    const platformDepth = 7;
+    const platformHeight = 1.8;
+
+    const baseGeo = new THREE.BoxGeometry(platformWidth, platformHeight, platformDepth);
+    const baseMat = new THREE.MeshStandardMaterial({
+      color: 0x475569,
+      roughness: 0.7,
+      metalness: 0.3,
+    });
+    const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+    baseMesh.position.y = platformHeight / 2;
+    stationGroup.add(baseMesh);
+
+    // Hazard stripe safety border on platform edge
+    const borderGeo = new THREE.BoxGeometry(platformWidth + 0.2, 0.3, platformDepth + 0.2);
+    const borderMat = new THREE.MeshStandardMaterial({
+      map: hazardTex,
+      roughness: 0.5,
+      metalness: 0.2,
+    });
+    const borderMesh = new THREE.Mesh(borderGeo, borderMat);
+    borderMesh.position.y = platformHeight + 0.15;
+    stationGroup.add(borderMesh);
+
+    // 2. Diamond Steel Treadplate Deck Surface
+    const deckGeo = new THREE.BoxGeometry(platformWidth - 0.2, 0.1, platformDepth - 0.2);
+    const deckMat = new THREE.MeshStandardMaterial({
+      map: steelTex,
+      roughness: 0.35,
+      metalness: 0.8,
+    });
+    const deckMesh = new THREE.Mesh(deckGeo, deckMat);
+    deckMesh.position.y = platformHeight + 0.35;
+    stationGroup.add(deckMesh);
+
+    // 3. Metallic Safety Railings & Handrails ("সাইডে দাঁড়ায় থাকার জন্য যে সাইডে দেয়")
+    const railingGroup = new THREE.Group();
+    const railMat = new THREE.MeshStandardMaterial({
+      color: 0xe2e8f0,
+      roughness: 0.2,
+      metalness: 0.9,
+    });
+
+    const postHeight = 1.25;
+    const postRadius = 0.05;
+    const postGeo = new THREE.CylinderGeometry(postRadius, postRadius, postHeight, 16);
+
+    // Guardrail posts around platform perimeter
+    const postPositions: { x: number; z: number }[] = [];
+    const halfW = platformWidth / 2 - 0.3;
+    const halfD = platformDepth / 2 - 0.3;
+
+    // Front & Back edges
+    for (let x = -halfW; x <= halfW; x += 2.2) {
+      postPositions.push({ x, z: halfD });
+      postPositions.push({ x, z: -halfD });
+    }
+    // Left edge
+    for (let z = -halfD + 1.8; z < halfD; z += 2.0) {
+      postPositions.push({ x: -halfW, z });
+    }
+
+    postPositions.forEach((pos) => {
+      const post = new THREE.Mesh(postGeo, railMat);
+      post.position.set(pos.x, platformHeight + 0.4 + postHeight / 2, pos.z);
+      railingGroup.add(post);
+    });
+
+    // Horizontal double steel pipe rails (Top Rail & Mid Rail)
+    const pipeMat = railMat;
+    const pipeRadius = 0.035;
+
+    const frontRailGeo = new THREE.CylinderGeometry(pipeRadius, pipeRadius, platformWidth - 0.6, 16);
+    frontRailGeo.rotateZ(Math.PI / 2);
+
+    const frontRailTop = new THREE.Mesh(frontRailGeo, pipeMat);
+    frontRailTop.position.set(0, platformHeight + 0.4 + postHeight * 0.95, halfD);
+    railingGroup.add(frontRailTop);
+
+    const frontRailMid = new THREE.Mesh(frontRailGeo, pipeMat);
+    frontRailMid.position.set(0, platformHeight + 0.4 + postHeight * 0.5, halfD);
+    railingGroup.add(frontRailMid);
+
+    const backRailTop = new THREE.Mesh(frontRailGeo, pipeMat);
+    backRailTop.position.set(0, platformHeight + 0.4 + postHeight * 0.95, -halfD);
+    railingGroup.add(backRailTop);
+
+    const backRailMid = new THREE.Mesh(frontRailGeo, pipeMat);
+    backRailMid.position.set(0, platformHeight + 0.4 + postHeight * 0.5, -halfD);
+    railingGroup.add(backRailMid);
+
+    const sideRailGeo = new THREE.CylinderGeometry(pipeRadius, pipeRadius, platformDepth - 0.6, 16);
+    sideRailGeo.rotateX(Math.PI / 2);
+
+    const leftRailTop = new THREE.Mesh(sideRailGeo, pipeMat);
+    leftRailTop.position.set(-halfW, platformHeight + 0.4 + postHeight * 0.95, 0);
+    railingGroup.add(leftRailTop);
+
+    const leftRailMid = new THREE.Mesh(sideRailGeo, pipeMat);
+    leftRailMid.position.set(-halfW, platformHeight + 0.4 + postHeight * 0.5, 0);
+    railingGroup.add(leftRailMid);
+
+    stationGroup.add(railingGroup);
+
+    // 4. Steel Access Staircase ("লোকজন ওঠার জন্য একটা লোহার সিঁড়ি")
+    const stairsGroup = new THREE.Group();
+    stairsGroup.position.set(halfW + 0.2, 0, 0);
+
+    const stepCount = 9;
+    const stairHeight = platformHeight + 0.4;
+    const stairLength = 4.2;
+    const stepWidth = 2.2;
+    const stepDepth = stairLength / stepCount;
+    const stepRise = stairHeight / stepCount;
+
+    const stepGeo = new THREE.BoxGeometry(stepDepth, 0.08, stepWidth);
+    const stepMat = new THREE.MeshStandardMaterial({ map: steelTex, roughness: 0.3, metalness: 0.85 });
+
+    for (let i = 0; i < stepCount; i++) {
+      const stepMesh = new THREE.Mesh(stepGeo, stepMat);
+      stepMesh.position.set(i * stepDepth, (i + 1) * stepRise, 0);
+      stairsGroup.add(stepMesh);
+    }
+
+    // Inclined Steel Stair Handrails
+    const stairAngle = Math.atan2(stairHeight, stairLength);
+    const stairDiagonal = Math.sqrt(stairHeight * stairHeight + stairLength * stairLength);
+    const handrailGeo = new THREE.CylinderGeometry(pipeRadius, pipeRadius, stairDiagonal, 16);
+    handrailGeo.rotateZ(-stairAngle + Math.PI / 2);
+
+    const stairRailLeft = new THREE.Mesh(handrailGeo, railMat);
+    stairRailLeft.position.set(stairLength / 2, stairHeight / 2 + 1.1, stepWidth / 2);
+    stairsGroup.add(stairRailLeft);
+
+    const stairRailRight = new THREE.Mesh(handrailGeo, railMat);
+    stairRailRight.position.set(stairLength / 2, stairHeight / 2 + 1.1, -stepWidth / 2);
+    stairsGroup.add(stairRailRight);
+
+    stationGroup.add(stairsGroup);
+
+    // 5. Industrial Vehicle / Rail Stop Bumper & Side Buffer Barriers ("ট্রেন থামার জন্য সাইডে লোহার একটা ইয়া / স্টপ ব্যারিয়ার")
+    const bumperGroup = new THREE.Group();
+    bumperGroup.position.set(-halfW - 1.2, 0, 0);
+
+    // Twin Heavy Steel Pillar Columns
+    const pillarGeo = new THREE.BoxGeometry(0.8, 2.2, 0.8);
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.3 });
+
+    const pillarLeft = new THREE.Mesh(pillarGeo, pillarMat);
+    pillarLeft.position.set(0, 1.1, 1.8);
+    bumperGroup.add(pillarLeft);
+
+    const pillarRight = new THREE.Mesh(pillarGeo, pillarMat);
+    pillarRight.position.set(0, 1.1, -1.8);
+    bumperGroup.add(pillarRight);
+
+    // Cross-braced Heavy Stop Beam with Hazard Warning Stripes
+    const crossBeamGeo = new THREE.BoxGeometry(0.9, 0.8, 4.2);
+    const crossBeamMat = new THREE.MeshStandardMaterial({ map: hazardTex, roughness: 0.4, metalness: 0.5 });
+    const crossBeam = new THREE.Mesh(crossBeamGeo, crossBeamMat);
+    crossBeam.position.set(0, 1.2, 0);
+    bumperGroup.add(crossBeam);
+
+    // Heavy Hydraulic Bumper Buffer Cylinders
+    const cylinderGeo = new THREE.CylinderGeometry(0.28, 0.28, 1.4, 24);
+    cylinderGeo.rotateZ(Math.PI / 2);
+    const cylinderMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.2 });
+
+    const bufferLeft = new THREE.Mesh(cylinderGeo, cylinderMat);
+    bufferLeft.position.set(-0.7, 1.2, 1.2);
+    bumperGroup.add(bufferLeft);
+
+    const bufferRight = new THREE.Mesh(cylinderGeo, cylinderMat);
+    bufferRight.position.set(-0.7, 1.2, -1.2);
+    bumperGroup.add(bufferRight);
+
+    stationGroup.add(bumperGroup);
+
+    // Overhead Platform Lamp Post
+    const floodlightGeo = new THREE.CylinderGeometry(0.06, 0.08, 4.5, 12);
+    const floodMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.8, roughness: 0.3 });
+    const floodPole = new THREE.Mesh(floodlightGeo, floodMat);
+    floodPole.position.set(0, platformHeight + 0.4 + 2.25, 0);
+    stationGroup.add(floodPole);
+
+    const lampGeo = new THREE.BoxGeometry(0.8, 0.3, 0.6);
+    const lampMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9 });
+    const lampMesh = new THREE.Mesh(lampGeo, lampMat);
+    lampMesh.position.set(0, platformHeight + 0.4 + 4.5, 0);
+    stationGroup.add(lampMesh);
+
+    return stationGroup;
+  }
+
+  private createPadStandingPlatform(): THREE.Group {
+    const standGroup = new THREE.Group();
+    // Positioned right beside the rocket on the concrete pad apron
+    standGroup.position.set(4.2, 0.6, 0);
+
+    const steelTex = createSteelPlateTexture();
+    const railMat = new THREE.MeshStandardMaterial({
+      color: 0xe2e8f0,
+      roughness: 0.2,
+      metalness: 0.88,
+    });
+
+    // 1. Standing Platform Deck right next to the rocket body
+    const deckGeo = new THREE.BoxGeometry(3.5, 0.15, 3.5);
+    const deckMat = new THREE.MeshStandardMaterial({
+      map: steelTex,
+      roughness: 0.35,
+      metalness: 0.8,
+    });
+    const deckMesh = new THREE.Mesh(deckGeo, deckMat);
+    deckMesh.position.y = 2.4; // Standing height next to rocket body
+    standGroup.add(deckMesh);
+
+    // Support Pillars from apron
+    const pillarGeo = new THREE.CylinderGeometry(0.08, 0.08, 2.4, 16);
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.3 });
+    const pillarCoords = [
+      { x: -1.5, z: -1.5 },
+      { x: 1.5, z: -1.5 },
+      { x: -1.5, z: 1.5 },
+      { x: 1.5, z: 1.5 },
+    ];
+    pillarCoords.forEach((p) => {
+      const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+      pillar.position.set(p.x, 1.2, p.z);
+      standGroup.add(pillar);
+    });
+
+    // 2. Safety Handrails around 3 sides (open towards rocket)
+    const postHeight = 1.1;
+    const postGeo = new THREE.CylinderGeometry(0.04, 0.04, postHeight, 12);
+
+    const railPosts = [
+      { x: 1.6, z: -1.6 },
+      { x: 1.6, z: 1.6 },
+      { x: -1.6, z: -1.6 },
+      { x: -1.6, z: 1.6 },
+      { x: 1.6, z: 0 },
+    ];
+    railPosts.forEach((p) => {
+      const post = new THREE.Mesh(postGeo, railMat);
+      post.position.set(p.x, 2.4 + postHeight / 2, p.z);
+      standGroup.add(post);
+    });
+
+    // Outer edge horizontal steel pipes
+    const pipeRadius = 0.03;
+    const pipeGeo = new THREE.CylinderGeometry(pipeRadius, pipeRadius, 3.2, 16);
+    pipeGeo.rotateX(Math.PI / 2);
+
+    const backRailTop = new THREE.Mesh(pipeGeo, railMat);
+    backRailTop.position.set(1.6, 2.4 + postHeight * 0.95, 0);
+    standGroup.add(backRailTop);
+
+    const backRailMid = new THREE.Mesh(pipeGeo, railMat);
+    backRailMid.position.set(1.6, 2.4 + postHeight * 0.5, 0);
+    standGroup.add(backRailMid);
+
+    // 3. Steel Stairs from ground/apron up to standing platform
+    const stairCount = 7;
+    const stepGeo = new THREE.BoxGeometry(0.4, 0.06, 1.2);
+    const stepMat = new THREE.MeshStandardMaterial({ map: steelTex, metalness: 0.8, roughness: 0.3 });
+
+    for (let i = 0; i < stairCount; i++) {
+      const step = new THREE.Mesh(stepGeo, stepMat);
+      step.position.set(1.8 + i * 0.35, (i + 1) * (2.4 / stairCount), 0);
+      standGroup.add(step);
+    }
+
+    return standGroup;
+  }
+
   private buildLaunchPadAndRocket(): void {
     this.launchPadGroup.position.set(1000, 0, 0);
     this.launchPadGroup.visible = false;
 
-    // Launch ground base / terrain
-    const groundGeo = new THREE.CylinderGeometry(40, 45, 2, 48);
-    const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x1e293b,
-      roughness: 0.9,
-      metalness: 0.1,
-    });
-    const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-    groundMesh.position.y = -1;
-    this.launchPadGroup.add(groundMesh);
+    // 1. Natural Golden Sun Illumination & Atmospheric Sky Lighting for Earth Spaceport
+    const padSunLight = new THREE.DirectionalLight(0xfffbeb, 3.2);
+    padSunLight.position.set(180, 220, 140);
+    this.launchPadGroup.add(padSunLight);
 
-    // Launch table & trench flame deflector
-    const flameTrenchGeo = new THREE.BoxGeometry(16, 4, 16);
-    const trenchMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
+    const padHemiLight = new THREE.HemisphereLight(0x93c5fd, 0x34522a, 1.4);
+    this.launchPadGroup.add(padHemiLight);
+
+    // 2. Photorealistic Undulating Terrain Grid (Rolling Green Hills & Mounds)
+    const terrainGeo = new THREE.PlaneGeometry(700, 700, 96, 96);
+    terrainGeo.rotateX(-Math.PI / 2);
+    const posAttr = terrainGeo.attributes.position as THREE.BufferAttribute;
+
+    for (let i = 0; i < posAttr.count; i++) {
+      const x = posAttr.getX(i);
+      const z = posAttr.getZ(i);
+      const dist = Math.sqrt(x * x + z * z);
+
+      // Natural rolling hills & coastal wetland mounds
+      const hill = Math.sin(x * 0.012) * Math.cos(z * 0.012) * 5.2 + Math.sin(x * 0.028 + z * 0.02) * 2.4;
+      // Smooth flattening around the pad center (radius < 45m)
+      const flatFactor = Math.min(1.0, Math.max(0.0, (dist - 18) / 32));
+      posAttr.setY(i, hill * flatFactor);
+    }
+    terrainGeo.computeVertexNormals();
+
+    const grassTex = createGrassFieldTexture();
+    const terrainMat = new THREE.MeshStandardMaterial({
+      map: grassTex,
+      roughness: 0.85,
+      metalness: 0.05,
+    });
+    const terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
+    terrainMesh.position.y = -0.5;
+    this.launchPadGroup.add(terrainMesh);
+
+    // Deep Earth Soil Sub-layer
+    const soilGeo = new THREE.CylinderGeometry(350, 360, 6, 64);
+    const soilMat = new THREE.MeshStandardMaterial({ color: 0x2b1e14, roughness: 0.95 });
+    const soilMesh = new THREE.Mesh(soilGeo, soilMat);
+    soilMesh.position.y = -3.5;
+    this.launchPadGroup.add(soilMesh);
+
+    // Concrete Launch Pad Apron (Weathered Octagonal Concrete Pad 39B)
+    const apronGeo = new THREE.CylinderGeometry(26, 28, 1.2, 8);
+    const apronMat = new THREE.MeshStandardMaterial({ color: 0x576574, roughness: 0.75, metalness: 0.2 });
+    const apronMesh = new THREE.Mesh(apronGeo, apronMat);
+    apronMesh.position.y = 0.6;
+    this.launchPadGroup.add(apronMesh);
+
+    // Flame Deflector Trench with scorched dark carbon textures
+    const flameTrenchGeo = new THREE.BoxGeometry(18, 4, 18);
+    const trenchMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.85 });
     const trenchMesh = new THREE.Mesh(flameTrenchGeo, trenchMat);
-    trenchMesh.position.y = 1;
+    trenchMesh.position.y = 1.2;
     this.launchPadGroup.add(trenchMesh);
 
-    // Launch Tower / Gantry Truss
-    const towerGroup = new THREE.Group();
-    towerGroup.position.set(-6, 12, 0);
-    const towerPillarGeo = new THREE.BoxGeometry(1.5, 24, 1.5);
-    const towerMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.6, roughness: 0.4 });
-    const towerMesh = new THREE.Mesh(towerPillarGeo, towerMat);
-    towerGroup.add(towerMesh);
+    // Asphalt Access Road leading across rolling green hills to launch pad
+    const roadGeo = new THREE.BoxGeometry(11, 0.2, 320);
+    const roadMat = new THREE.MeshStandardMaterial({ color: 0x2f3542, roughness: 0.85 });
+    const roadMesh = new THREE.Mesh(roadGeo, roadMat);
+    roadMesh.position.set(0, 0.2, 140);
+    this.launchPadGroup.add(roadMesh);
 
-    // Tower swing arms
-    const arm1 = new THREE.Mesh(new THREE.BoxGeometry(5, 0.4, 0.4), towerMat);
-    arm1.position.set(2.5, 6, 0);
-    towerGroup.add(arm1);
-    const arm2 = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.4, 0.4), towerMat);
-    arm2.position.set(2.25, 2, 0);
-    towerGroup.add(arm2);
-    this.launchPadGroup.add(towerGroup);
+    // White paint lane lines on road
+    const lineGeo = new THREE.BoxGeometry(0.4, 0.22, 320);
+    const lineMat = new THREE.MeshBasicMaterial({ color: 0xf1f2f6 });
+    const lineMesh = new THREE.Mesh(lineGeo, lineMat);
+    lineMesh.position.set(0, 0.22, 140);
+    this.launchPadGroup.add(lineMesh);
 
-    // Atmospheric skybox for launch pad: starts as dusk atmosphere and fades into black space
-    const skyGeo = new THREE.SphereGeometry(180, 32, 32);
+    // 3. Dense Photorealistic Forest, Nature Groves & Coastal Vegetation Scatter
+    const forestGroup = new THREE.Group();
+    const treeCount = 170;
+    for (let i = 0; i < treeCount; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 36 + Math.random() * 260;
+      const x = Math.cos(angle) * dist;
+      const z = Math.sin(angle) * dist;
+
+      // Sample approximate terrain elevation at (x, z)
+      const hillY = (Math.sin(x * 0.012) * Math.cos(z * 0.012) * 5.2 + Math.sin(x * 0.028 + z * 0.02) * 2.4) *
+        Math.min(1.0, Math.max(0.0, (dist - 18) / 32));
+
+      const rand = Math.random();
+      const type = rand > 0.55 ? 'deciduous' : rand > 0.25 ? 'conifer' : 'shrub';
+      const tree = this.create3DTreeMesh(type);
+      tree.position.set(x, hillY - 0.5, z);
+
+      const scale = type === 'shrub' ? (0.9 + Math.random() * 0.8) : (0.8 + Math.random() * 1.0);
+      tree.scale.set(scale, scale * (0.9 + Math.random() * 0.35), scale);
+      tree.rotation.y = Math.random() * Math.PI * 2;
+      tree.rotation.x = (Math.random() - 0.5) * 0.06;
+      tree.rotation.z = (Math.random() - 0.5) * 0.06;
+
+      forestGroup.add(tree);
+    }
+    this.launchPadGroup.add(forestGroup);
+
+    // 4. Spaceport Operations & Launch Support Facility
+    const opsGroup = new THREE.Group();
+    opsGroup.position.set(-90, 0, 70);
+
+    const bldgGeo = new THREE.BoxGeometry(22, 7, 14);
+    const bldgMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.4, metalness: 0.3 });
+    const bldgMesh = new THREE.Mesh(bldgGeo, bldgMat);
+    bldgMesh.position.y = 3.5;
+    opsGroup.add(bldgMesh);
+
+    // Radar Dish
+    const radarDish = new THREE.Mesh(
+      new THREE.SphereGeometry(3.0, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2.2),
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.3, side: THREE.DoubleSide })
+    );
+    radarDish.rotation.x = -Math.PI / 3;
+    radarDish.position.set(0, 8.5, 0);
+    opsGroup.add(radarDish);
+
+    this.launchPadGroup.add(opsGroup);
+
+    // 5. Industrial Station Boarding Platform & Viewing Observation Deck with Handrails, Stairs & Wheel-Stop Bumpers
+    this.stationPlatformGroup = this.createStationPlatformAndRailings();
+    this.launchPadGroup.add(this.stationPlatformGroup);
+
+    // 5b. Standing Crew Access Platform right beside the rocket on concrete pad apron
+    this.launchPadGroup.add(this.createPadStandingPlatform());
+
+    // 6. Photorealistic Atmospheric Sky Dome
+    const skyGeo = new THREE.SphereGeometry(350, 32, 32);
+    const skyTex = createDaytimeSkyTexture();
     this.padSkyMat = new THREE.MeshBasicMaterial({
-      color: 0x0b2545,
+      map: skyTex,
       side: THREE.BackSide,
       transparent: true,
       opacity: 1.0,
@@ -599,7 +1069,30 @@ export class SpaceScene {
     this.padSkyMesh = new THREE.Mesh(skyGeo, this.padSkyMat);
     this.launchPadGroup.add(this.padSkyMesh);
 
-    // Curved Earth horizon mesh below launch trajectory (reveals as altitude increases)
+    // 7. Volumetric 3D Cumulus Clouds floating softly above landscape
+    const cloudMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.75,
+      roughness: 0.9,
+    });
+    for (let c = 0; c < 16; c++) {
+      const cloudGroup = new THREE.Group();
+      const cloudAngle = (c / 16) * Math.PI * 2 + Math.random() * 0.4;
+      const cloudDist = 80 + Math.random() * 140;
+      const cloudHeight = 50 + Math.random() * 40;
+
+      const puffCount = 6 + Math.floor(Math.random() * 4);
+      for (let p = 0; p < puffCount; p++) {
+        const puff = new THREE.Mesh(new THREE.DodecahedronGeometry(9 + Math.random() * 8, 1), cloudMat);
+        puff.position.set((p - puffCount / 2) * 9, (Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5);
+        cloudGroup.add(puff);
+      }
+      cloudGroup.position.set(Math.cos(cloudAngle) * cloudDist, cloudHeight, Math.sin(cloudAngle) * cloudDist);
+      this.launchPadGroup.add(cloudGroup);
+    }
+
+    // Curved Earth horizon mesh below launch trajectory (reveals as altitude increases into orbit)
     const earthDiscGeo = new THREE.SphereGeometry(120, 48, 48);
     const earthDiscMat = new THREE.MeshStandardMaterial({
       map: createEarthTexture(),
@@ -781,24 +1274,123 @@ export class SpaceScene {
     nozzleMesh.position.y = -0.7;
     this.rocketMesh.add(nozzleMesh);
 
-    // Engine ignition light
-    this.rocketIgnitionLight = new THREE.PointLight(0xf97316, 0, 60, 1.5);
-    this.rocketIgnitionLight.position.set(0, -1.2, 0);
+    // Primary Engine Ignition Light (Casts warm radiant fire glow onto pad, station platform, railings, and ground)
+    this.rocketIgnitionLight = new THREE.PointLight(0xff7700, 0, 180, 1.2);
+    this.rocketIgnitionLight.position.set(0, -2.0, 0);
     this.rocketMesh.add(this.rocketIgnitionLight);
 
+    // Secondary Throat Core Light (Intense white-cyan plasma glare at nozzle base)
+    this.rocketCoreLight = new THREE.PointLight(0xbae6fd, 0, 45, 1.0);
+    this.rocketCoreLight.position.set(0, -1.0, 0);
+    this.rocketMesh.add(this.rocketCoreLight);
+
+    // 8. Streamlined Real Rocket Engine Flame Assembly
+    this.rocketFlameGroup = new THREE.Group();
+    this.rocketFlameGroup.position.set(0, -0.7, 0);
+
+    const flameTex = createUltraRealFlameTexture();
+    const machTex = createMachDiskTexture();
+
+    // Inner White-Hot Concentrated Nozzle Core Stream
+    const innerFlameGeo = new THREE.CylinderGeometry(0.22, 0.45, 4.5, 24, 1, true);
+    innerFlameGeo.translate(0, -2.25, 0);
+    const innerFlameMat = new THREE.MeshBasicMaterial({
+      map: flameTex,
+      transparent: true,
+      opacity: 0.98,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    this.innerFlameMesh = new THREE.Mesh(innerFlameGeo, innerFlameMat);
+    this.rocketFlameGroup.add(this.innerFlameMesh);
+
+    // Main Orange Plume Cone coming straight from engine base
+    const mainFlameGeo = new THREE.ConeGeometry(0.72, 6.2, 24, 1, true);
+    mainFlameGeo.rotateX(Math.PI);
+    mainFlameGeo.translate(0, -3.1, 0);
+    const mainFlameMat = new THREE.MeshBasicMaterial({
+      map: flameTex,
+      transparent: true,
+      opacity: 0.88,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    this.mainFlameMesh = new THREE.Mesh(mainFlameGeo, mainFlameMat);
+    this.rocketFlameGroup.add(this.mainFlameMesh);
+
+    // Outer Crimson Plume Boundary
+    const outerFlameGeo = new THREE.ConeGeometry(1.05, 8.2, 24, 1, true);
+    outerFlameGeo.rotateX(Math.PI);
+    outerFlameGeo.translate(0, -4.1, 0);
+    const outerFlameMat = new THREE.MeshBasicMaterial({
+      map: flameTex,
+      transparent: true,
+      opacity: 0.65,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    this.outerFlameMesh = new THREE.Mesh(outerFlameGeo, outerFlameMat);
+    this.rocketFlameGroup.add(this.outerFlameMesh);
+
+    // Supersonic Shock Diamonds / Mach Disks
+    this.shockDiamonds = [];
+    const machGeo = new THREE.PlaneGeometry(0.65, 0.65);
+    const machMat = new THREE.MeshBasicMaterial({
+      map: machTex,
+      transparent: true,
+      opacity: 0.92,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+
+    for (let m = 0; m < 3; m++) {
+      const disk = new THREE.Mesh(machGeo, machMat);
+      disk.rotation.x = Math.PI / 2;
+      disk.position.y = -0.8 - m * 1.2;
+      this.shockDiamonds.push(disk);
+      this.rocketFlameGroup.add(disk);
+    }
+
+    // SRB Left Booster Flame
+    const srbFlameGeo = new THREE.CylinderGeometry(0.12, 0.35, 4.8, 16, 1, true);
+    srbFlameGeo.translate(0, -2.4, 0);
+    const srbFlameMat = new THREE.MeshBasicMaterial({
+      map: flameTex,
+      transparent: true,
+      opacity: 0.9,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    this.srbFlameLeft = new THREE.Mesh(srbFlameGeo, srbFlameMat);
+    this.srbFlameLeft.position.set(-2.1, 0, 0);
+    this.rocketFlameGroup.add(this.srbFlameLeft);
+
+    // SRB Right Booster Flame
+    this.srbFlameRight = new THREE.Mesh(srbFlameGeo, srbFlameMat);
+    this.srbFlameRight.position.set(2.1, 0, 0);
+    this.rocketFlameGroup.add(this.srbFlameRight);
+
+    this.rocketFlameGroup.visible = false;
+    this.rocketMesh.add(this.rocketFlameGroup);
+
     // Exhaust particle system
-    const exhaustCount = 450;
+    const exhaustCount = 600;
     this.exhaustGeometry = new THREE.BufferGeometry();
     const exhaustPositions = new Float32Array(exhaustCount * 3);
     const exhaustColors = new Float32Array(exhaustCount * 3);
 
     for (let i = 0; i < exhaustCount; i++) {
-      exhaustPositions[i * 3] = (Math.random() - 0.5) * 1.5;
-      exhaustPositions[i * 3 + 1] = -Math.random() * 8;
-      exhaustPositions[i * 3 + 2] = (Math.random() - 0.5) * 1.5;
+      exhaustPositions[i * 3] = (Math.random() - 0.5) * 2.2;
+      exhaustPositions[i * 3 + 1] = -Math.random() * 14;
+      exhaustPositions[i * 3 + 2] = (Math.random() - 0.5) * 2.2;
 
       exhaustColors[i * 3] = 1.0;
-      exhaustColors[i * 3 + 1] = 0.5 + Math.random() * 0.4;
+      exhaustColors[i * 3 + 1] = 0.4 + Math.random() * 0.5;
       exhaustColors[i * 3 + 2] = 0.1;
     }
 
@@ -806,7 +1398,7 @@ export class SpaceScene {
     this.exhaustGeometry.setAttribute('color', new THREE.BufferAttribute(exhaustColors, 3));
 
     const exhaustMat = new THREE.PointsMaterial({
-      size: 1.8,
+      size: 2.2,
       vertexColors: true,
       transparent: true,
       opacity: 0,
@@ -999,6 +1591,7 @@ export class SpaceScene {
       this.isTransitioningCamera = false;
       this.solarSystemGroup.visible = false;
       this.launchPadGroup.visible = true;
+      this.scene.fog = new THREE.FogExp2(0x93c5fd, 0.0012);
 
       // Anchor camera strictly to Pad 39B at wide majestic view distance
       if (this.launchProgress <= 0.05) {
@@ -1009,6 +1602,7 @@ export class SpaceScene {
       this.setLaunchProgress(this.launchProgress, this.launchTarget);
       this.updateLaunchCamera(this.launchProgress);
     } else {
+      this.scene.fog = null;
       this.autoLaunchActive = false;
       this.callbacks.onAutoLaunchStateChange?.(false);
       this.launchPadGroup.visible = false;
@@ -1153,14 +1747,15 @@ export class SpaceScene {
         const transitT = (p - 0.65) / 0.35; // 0 to 1
 
         if (target === 'earth_orbit') {
-          const orbitAngle = transitT * Math.PI * 1.5;
+          const orbitAngle = transitT * Math.PI * 0.4;
           const radius = 60;
           this.rocketMesh.position.set(
             Math.cos(orbitAngle) * radius,
             120 + Math.sin(orbitAngle) * 15,
             Math.sin(orbitAngle) * radius
           );
-          this.rocketMesh.rotation.set(Math.PI / 2, 0, -orbitAngle);
+          // Fixed, completely stable prograde orientation without spinning loops or double-paks
+          this.rocketMesh.rotation.set(Math.PI / 2.2, 0, Math.PI / 3);
         } else if (target === 'lunar_transit') {
           const startPos = new THREE.Vector3(0, 120, 0);
           const endPos = new THREE.Vector3(-110, 102, -120); // Settles directly over the top of the round Moon globe mesh
@@ -1180,6 +1775,14 @@ export class SpaceScene {
     }
 
     // 3. Environmental Atmosphere & Destination Mesh visibility
+    if (p < 0.15) {
+      if (this.currentViewMode === 'launch-simulator') {
+        this.scene.fog = new THREE.FogExp2(0x93c5fd, 0.0012);
+      }
+    } else {
+      this.scene.fog = null;
+    }
+
     if (this.padSkyMat) {
       if (p < 0.15) {
         this.padSkyMat.opacity = 1.0;
@@ -1208,13 +1811,23 @@ export class SpaceScene {
       this.marsArrivalMesh.visible = (target === 'mars_transfer' && p >= 0.55);
     }
 
-    // Engine ignition & exhaust effects
-    const isEngineBurning = p > 0.03 && p < 0.95;
-    if (this.rocketIgnitionLight) {
-      this.rocketIgnitionLight.intensity = isEngineBurning ? (p < 0.65 ? 16 : 8) : 0;
+    // Engine ignition & streamlined real rocket flame effects
+    const isEngineBurning = p > 0.01 && p < 0.95;
+    if (this.rocketFlameGroup) {
+      this.rocketFlameGroup.visible = isEngineBurning;
     }
+
+    if (this.rocketIgnitionLight) {
+      this.rocketIgnitionLight.intensity = isEngineBurning ? (p < 0.25 ? 35 : 18) : 0;
+      this.rocketIgnitionLight.distance = isEngineBurning ? 90 : 0;
+    }
+
+    if (this.rocketCoreLight) {
+      this.rocketCoreLight.intensity = isEngineBurning ? 22 : 0;
+    }
+
     if (this.exhaustParticles) {
-      (this.exhaustParticles.material as THREE.PointsMaterial).opacity = isEngineBurning ? (p < 0.65 ? 1.0 : 0.6) : 0;
+      (this.exhaustParticles.material as THREE.PointsMaterial).opacity = isEngineBurning ? 0.7 : 0;
     }
 
     // 4. Camera Tracking (Always locked to the rocket)
@@ -1378,16 +1991,29 @@ export class SpaceScene {
         }
       }
 
-      // 3. Exhaust Particle Animation during active burns
-      if (this.exhaustGeometry && (this.launchProgress > 0.03 && this.launchProgress < 0.95)) {
+      // 3. Clean Engine Flame Stream Animation (Subtle natural wave, no chaotic vibration)
+      const isBurning = this.launchProgress > 0.01 && this.launchProgress < 0.95;
+      if (this.rocketFlameGroup && isBurning) {
+        const time = Date.now() * 0.008;
+        const subtleY = 1.0 + Math.sin(time * 3) * 0.03;
+        this.rocketFlameGroup.scale.set(1.0, subtleY, 1.0);
+
+        // Subtle shock diamond pulse
+        this.shockDiamonds.forEach((disk, idx) => {
+          const shockScale = 1.0 + Math.sin(time * 4 + idx) * 0.06;
+          disk.scale.set(shockScale, shockScale, 1.0);
+        });
+      }
+
+      if (this.exhaustGeometry && isBurning) {
         const posAttr = this.exhaustGeometry.getAttribute('position') as THREE.BufferAttribute;
         const posArr = posAttr.array as Float32Array;
         for (let i = 0; i < posArr.length; i += 3) {
-          posArr[i + 1] -= delta * 32;
-          if (posArr[i + 1] < -12) {
+          posArr[i + 1] -= delta * 36;
+          if (posArr[i + 1] < -16) {
             posArr[i + 1] = 0;
-            posArr[i] = (Math.random() - 0.5) * 1.5;
-            posArr[i + 2] = (Math.random() - 0.5) * 1.5;
+            posArr[i] = (Math.random() - 0.5) * 2.2;
+            posArr[i + 2] = (Math.random() - 0.5) * 2.2;
           }
         }
         posAttr.needsUpdate = true;
