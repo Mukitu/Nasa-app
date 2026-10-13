@@ -64,18 +64,6 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <span>Solar System</span>
         </button>
-
-        <button
-          onClick={() => onSelectView('archive')}
-          className={`whitespace-nowrap shrink-0 transition-colors cursor-pointer py-1 border-b-2 flex items-center gap-1.5 ${
-            currentView === 'archive'
-              ? 'text-sky-400 border-sky-400 font-semibold'
-              : 'text-slate-400 border-transparent hover:text-slate-200'
-          }`}
-        >
-          <Search className="w-3.5 h-3.5" />
-          <span>NASA Archive Search</span>
-        </button>
       </nav>
 
       {/* Zone 3: Primary Action */}

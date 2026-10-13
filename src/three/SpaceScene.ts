@@ -86,7 +86,7 @@ export class SpaceScene {
   private orbitSpeedMultiplier: number = 1.0;
   private isPaused: boolean = false;
   private missionPhase: MissionPhase = 'STANDBY';
-  private launchTarget: LaunchTarget = 'earth_orbit';
+  private launchTarget: LaunchTarget = null;
 
   // Continuous Launch Progress (0.0 to 1.0)
   private launchProgress: number = 0.0;
@@ -844,86 +844,131 @@ export class SpaceScene {
     return stationGroup;
   }
 
-  private createPadStandingPlatform(): THREE.Group {
-    const standGroup = new THREE.Group();
-    // Positioned right beside the rocket on the concrete pad apron
-    standGroup.position.set(4.2, 0.6, 0);
+  /**
+   * Constructs realistic NASA Steel Umbilical Launch Tower & Crew Boarding Walkway Bridge
+   * ("রকেটের সাথে কানেক্টেড স্টিল টাওয়ার ও প্যাসেঞ্জার বোর্ডিং গ্যাংওয়ে বা ক্রু ব্রিজ")
+   */
+  private createLaunchUmbilicalTowerAndBridge(): THREE.Group {
+    const towerGroup = new THREE.Group();
+    // Tower stands adjacent to rocket at x = 7.5, z = 0
+    towerGroup.position.set(7.5, 0, 0);
 
-    const steelTex = createSteelPlateTexture();
-    const railMat = new THREE.MeshStandardMaterial({
-      color: 0xe2e8f0,
-      roughness: 0.2,
-      metalness: 0.88,
-    });
+    const redSteelMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.35, metalness: 0.75 });
+    const whiteSteelMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3, metalness: 0.8 });
+    const darkSteelMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.85 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.45, roughness: 0.1 });
 
-    // 1. Standing Platform Deck right next to the rocket body
-    const deckGeo = new THREE.BoxGeometry(3.5, 0.15, 3.5);
-    const deckMat = new THREE.MeshStandardMaterial({
-      map: steelTex,
-      roughness: 0.35,
-      metalness: 0.8,
-    });
-    const deckMesh = new THREE.Mesh(deckGeo, deckMat);
-    deckMesh.position.y = 2.4; // Standing height next to rocket body
-    standGroup.add(deckMesh);
+    const towerHeight = 44.0;
+    const towerWidth = 3.6;
+    const towerDepth = 3.6;
 
-    // Support Pillars from apron
-    const pillarGeo = new THREE.CylinderGeometry(0.08, 0.08, 2.4, 16);
-    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.3 });
-    const pillarCoords = [
-      { x: -1.5, z: -1.5 },
-      { x: 1.5, z: -1.5 },
-      { x: -1.5, z: 1.5 },
-      { x: 1.5, z: 1.5 },
+    // 1. Four Heavy Vertical Lattice Steel Legs
+    const legRadius = 0.22;
+    const legOffsets = [
+      { x: -towerWidth / 2, z: -towerDepth / 2 },
+      { x: towerWidth / 2, z: -towerDepth / 2 },
+      { x: -towerWidth / 2, z: towerDepth / 2 },
+      { x: towerWidth / 2, z: towerDepth / 2 },
     ];
-    pillarCoords.forEach((p) => {
-      const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-      pillar.position.set(p.x, 1.2, p.z);
-      standGroup.add(pillar);
+
+    legOffsets.forEach((off) => {
+      // Alternating Red and White Aviation Safety Bands
+      const sectionCount = 8;
+      const sectionH = towerHeight / sectionCount;
+      for (let s = 0; s < sectionCount; s++) {
+        const mat = s % 2 === 0 ? redSteelMat : whiteSteelMat;
+        const legSeg = new THREE.Mesh(new THREE.CylinderGeometry(legRadius, legRadius, sectionH, 12), mat);
+        legSeg.position.set(off.x, s * sectionH + sectionH / 2, off.z);
+        legSeg.castShadow = true;
+        towerGroup.add(legSeg);
+      }
     });
 
-    // 2. Safety Handrails around 3 sides (open towards rocket)
-    const postHeight = 1.1;
-    const postGeo = new THREE.CylinderGeometry(0.04, 0.04, postHeight, 12);
+    // 2. Horizontal & Diagonal Lattice Truss Cross-Bracing
+    const trussRadius = 0.08;
+    const levelCount = 11;
+    for (let l = 1; l < levelCount; l++) {
+      const h = (l / levelCount) * towerHeight;
+      const ringMat = l % 2 === 0 ? redSteelMat : whiteSteelMat;
 
-    const railPosts = [
-      { x: 1.6, z: -1.6 },
-      { x: 1.6, z: 1.6 },
-      { x: -1.6, z: -1.6 },
-      { x: -1.6, z: 1.6 },
-      { x: 1.6, z: 0 },
-    ];
-    railPosts.forEach((p) => {
-      const post = new THREE.Mesh(postGeo, railMat);
-      post.position.set(p.x, 2.4 + postHeight / 2, p.z);
-      standGroup.add(post);
-    });
+      // Outer Perimeter Horizontal Beams
+      const beamGeoX = new THREE.CylinderGeometry(trussRadius, trussRadius, towerWidth, 8);
+      beamGeoX.rotateZ(Math.PI / 2);
 
-    // Outer edge horizontal steel pipes
-    const pipeRadius = 0.03;
-    const pipeGeo = new THREE.CylinderGeometry(pipeRadius, pipeRadius, 3.2, 16);
-    pipeGeo.rotateX(Math.PI / 2);
+      const b1 = new THREE.Mesh(beamGeoX, ringMat);
+      b1.position.set(0, h, -towerDepth / 2);
+      towerGroup.add(b1);
 
-    const backRailTop = new THREE.Mesh(pipeGeo, railMat);
-    backRailTop.position.set(1.6, 2.4 + postHeight * 0.95, 0);
-    standGroup.add(backRailTop);
+      const b2 = new THREE.Mesh(beamGeoX, ringMat);
+      b2.position.set(0, h, towerDepth / 2);
+      towerGroup.add(b2);
 
-    const backRailMid = new THREE.Mesh(pipeGeo, railMat);
-    backRailMid.position.set(1.6, 2.4 + postHeight * 0.5, 0);
-    standGroup.add(backRailMid);
+      const beamGeoZ = new THREE.CylinderGeometry(trussRadius, trussRadius, towerDepth, 8);
+      beamGeoZ.rotateX(Math.PI / 2);
 
-    // 3. Steel Stairs from ground/apron up to standing platform
-    const stairCount = 7;
-    const stepGeo = new THREE.BoxGeometry(0.4, 0.06, 1.2);
-    const stepMat = new THREE.MeshStandardMaterial({ map: steelTex, metalness: 0.8, roughness: 0.3 });
+      const b3 = new THREE.Mesh(beamGeoZ, ringMat);
+      b3.position.set(-towerWidth / 2, h, 0);
+      towerGroup.add(b3);
 
-    for (let i = 0; i < stairCount; i++) {
-      const step = new THREE.Mesh(stepGeo, stepMat);
-      step.position.set(1.8 + i * 0.35, (i + 1) * (2.4 / stairCount), 0);
-      standGroup.add(step);
+      const b4 = new THREE.Mesh(beamGeoZ, ringMat);
+      b4.position.set(towerWidth / 2, h, 0);
+      towerGroup.add(b4);
     }
 
-    return standGroup;
+    // 3. Crew Access Arm & Enclosed Boarding Walkway Bridge (Extends from Tower to Rocket Crew Module at y = 28m)
+    const bridgeY = 28.0; // Lines up with upper crew hatch level
+    const bridgeGroup = new THREE.Group();
+    bridgeGroup.position.set(0, bridgeY, 0);
+
+    const bridgeLength = 7.5; // Distance from tower (x=7.5) to rocket (x=0)
+    const bridgeGeo = new THREE.BoxGeometry(bridgeLength, 2.2, 1.8);
+    const bridgeMesh = new THREE.Mesh(bridgeGeo, whiteSteelMat);
+    bridgeMesh.position.set(-bridgeLength / 2, 0, 0);
+    bridgeMesh.castShadow = true;
+    bridgeGroup.add(bridgeMesh);
+
+    // Enclosed Glass Observation Windows on Crew Walkway Bridge
+    const windowGeo = new THREE.BoxGeometry(bridgeLength - 0.4, 0.9, 1.82);
+    const windowMesh = new THREE.Mesh(windowGeo, glassMat);
+    windowMesh.position.set(-bridgeLength / 2, 0.2, 0);
+    bridgeGroup.add(windowMesh);
+
+    // White Room Capsule Chamber at Rocket Hatch Terminal
+    const whiteRoomGeo = new THREE.BoxGeometry(2.2, 2.8, 2.4);
+    const whiteRoomMesh = new THREE.Mesh(whiteRoomGeo, whiteSteelMat);
+    whiteRoomMesh.position.set(-bridgeLength + 0.5, 0, 0);
+    whiteRoomMesh.castShadow = true;
+    bridgeGroup.add(whiteRoomMesh);
+
+    // Steel Support Strut under Crew Access Arm
+    const strutGeo = new THREE.CylinderGeometry(0.12, 0.12, 6.5, 12);
+    const strutMesh = new THREE.Mesh(strutGeo, darkSteelMat);
+    strutMesh.position.set(-3.2, -2.2, 0);
+    strutMesh.rotation.z = -0.55;
+    bridgeGroup.add(strutMesh);
+
+    towerGroup.add(bridgeGroup);
+
+    // 4. Lower Stage Umbilical Fuel Swing Arms
+    const fuelArm1 = new THREE.Mesh(new THREE.BoxGeometry(6.2, 0.4, 0.4), darkSteelMat);
+    fuelArm1.position.set(-3.1, 10.0, 0);
+    towerGroup.add(fuelArm1);
+
+    const fuelArm2 = new THREE.Mesh(new THREE.BoxGeometry(5.8, 0.35, 0.35), darkSteelMat);
+    fuelArm2.position.set(-2.9, 18.0, 0);
+    towerGroup.add(fuelArm2);
+
+    // 5. Red LED Aviation Beacon Light at top of Launch Tower
+    const towerBeaconLight = new THREE.PointLight(0xef4444, 4.0, 45);
+    towerBeaconLight.position.set(0, towerHeight + 1.2, 0);
+    towerGroup.add(towerBeaconLight);
+
+    const beaconGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.4, 12);
+    const beaconMesh = new THREE.Mesh(beaconGeo, new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+    beaconMesh.position.set(0, towerHeight + 0.2, 0);
+    towerGroup.add(beaconMesh);
+
+    return towerGroup;
   }
 
   private buildLaunchPadAndRocket(): void {
@@ -1054,8 +1099,8 @@ export class SpaceScene {
     this.stationPlatformGroup = this.createStationPlatformAndRailings();
     this.launchPadGroup.add(this.stationPlatformGroup);
 
-    // 5b. Standing Crew Access Platform right beside the rocket on concrete pad apron
-    this.launchPadGroup.add(this.createPadStandingPlatform());
+    // 5b. Steel Umbilical Launch Tower & Crew Access Walkway Bridge
+    this.launchPadGroup.add(this.createLaunchUmbilicalTowerAndBridge());
 
     // 6. Photorealistic Atmospheric Sky Dome
     const skyGeo = new THREE.SphereGeometry(350, 32, 32);
@@ -1687,28 +1732,19 @@ export class SpaceScene {
       altitudeKm = Math.round(140 + (p - 0.65) * 500);
       velocityKmh = Math.round(12000 + (p - 0.65) * 22000);
     } else if (p < 0.98) {
-      if (target === 'earth_orbit') {
-        phase = 'ORBIT_INSERTION';
-        altitudeKm = Math.round(220 + (p - 0.75) * 180);
-        velocityKmh = 27600;
-      } else {
-        phase = 'TRANSIT_FLIGHT';
-        altitudeKm = target === 'lunar_transit'
-          ? Math.round(400 + (p - 0.75) * 1530000)
-          : Math.round(400 + (p - 0.75) * 225000000);
-        velocityKmh = target === 'lunar_transit' ? 39000 : 58000;
-      }
+      phase = 'TRANSIT_FLIGHT';
+      altitudeKm = target === 'mars_transfer'
+        ? Math.round(400 + (p - 0.75) * 225000000)
+        : Math.round(400 + (p - 0.75) * 1530000);
+      velocityKmh = target === 'mars_transfer' ? 58000 : 39000;
     } else {
       phase = 'DESTINATION_ARRIVED';
-      if (target === 'earth_orbit') {
-        altitudeKm = 408;
-        velocityKmh = 27600;
-      } else if (target === 'lunar_transit') {
-        altitudeKm = 100;
-        velocityKmh = 5800;
-      } else {
+      if (target === 'mars_transfer') {
         altitudeKm = 250;
         velocityKmh = 14500;
+      } else {
+        altitudeKm = 100;
+        velocityKmh = 5800;
       }
     }
 
@@ -1746,30 +1782,18 @@ export class SpaceScene {
         // Orbit and Deep Space Transit: smooth trajectory with safe destination stopping
         const transitT = (p - 0.65) / 0.35; // 0 to 1
 
-        if (target === 'earth_orbit') {
-          const orbitAngle = transitT * Math.PI * 0.4;
-          const radius = 60;
-          this.rocketMesh.position.set(
-            Math.cos(orbitAngle) * radius,
-            120 + Math.sin(orbitAngle) * 15,
-            Math.sin(orbitAngle) * radius
-          );
-          // Fixed, completely stable prograde orientation without spinning loops or double-paks
-          this.rocketMesh.rotation.set(Math.PI / 2.2, 0, Math.PI / 3);
-        } else if (target === 'lunar_transit') {
+        if (target === 'mars_transfer') {
           const startPos = new THREE.Vector3(0, 120, 0);
-          const endPos = new THREE.Vector3(-110, 102, -120); // Settles directly over the top of the round Moon globe mesh
+          const endPos = new THREE.Vector3(130, 78, -160); // Settles directly over Mars globe
           const currentPos = new THREE.Vector3().lerpVectors(startPos, endPos, Math.min(1, transitT));
           this.rocketMesh.position.copy(currentPos);
-          // Perfectly stable heading toward target without spinning or roll oscillation
-          this.rocketMesh.rotation.set(0.45, 0.25, 0);
-        } else if (target === 'mars_transfer') {
-          const startPos = new THREE.Vector3(0, 120, 0);
-          const endPos = new THREE.Vector3(130, 78, -160); // Settles directly over the top of the round Mars globe mesh
-          const currentPos = new THREE.Vector3().lerpVectors(startPos, endPos, Math.min(1, transitT));
-          this.rocketMesh.position.copy(currentPos);
-          // Perfectly stable heading toward target without spinning or roll oscillation
           this.rocketMesh.rotation.set(0.45, -0.25, 0);
+        } else {
+          const startPos = new THREE.Vector3(0, 120, 0);
+          const endPos = new THREE.Vector3(-110, 102, -120); // Settles directly over Moon globe
+          const currentPos = new THREE.Vector3().lerpVectors(startPos, endPos, Math.min(1, transitT));
+          this.rocketMesh.position.copy(currentPos);
+          this.rocketMesh.rotation.set(0.45, 0.25, 0);
         }
       }
     }

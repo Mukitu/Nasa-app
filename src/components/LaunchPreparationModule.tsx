@@ -25,6 +25,7 @@ import {
   ListOrdered,
   Layers,
   Sparkles,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface LaunchPreparationModuleProps {
@@ -75,6 +76,7 @@ export const LaunchPreparationModule: React.FC<LaunchPreparationModuleProps> = (
   });
 
   const [activeCameraView, setActiveCameraView] = useState<'pad' | 'tower' | 'ascent' | 'orbital' | 'spacecraft' | 'free'>('pad');
+  const [showTargetWarning, setShowTargetWarning] = useState(false);
 
   const allChecksPassed = Object.values(checklist).every(Boolean);
 
@@ -94,14 +96,12 @@ export const LaunchPreparationModule: React.FC<LaunchPreparationModuleProps> = (
 
   const getTargetTitle = () => {
     switch (target) {
-      case 'earth_orbit':
-        return 'Earth Stable Orbit (LEO)';
       case 'lunar_transit':
         return 'Moon Transit & Landing';
       case 'mars_transfer':
         return 'Mars Transfer & Landing';
       default:
-        return 'Earth Orbit';
+        return 'Select Target (Moon or Mars)';
     }
   };
 
@@ -184,38 +184,46 @@ export const LaunchPreparationModule: React.FC<LaunchPreparationModuleProps> = (
               </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-1.5 font-tech text-xs">
+            <div className="grid grid-cols-2 gap-1.5 font-tech text-xs">
               <button
-                onClick={() => onSetTarget('earth_orbit')}
-                className={`py-1.5 px-1 rounded text-center transition-all cursor-pointer border ${
-                  target === 'earth_orbit'
-                    ? 'bg-sky-500/25 border-sky-400 text-sky-200 font-semibold shadow-xs'
-                    : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Earth Orbit
-              </button>
-              <button
-                onClick={() => onSetTarget('lunar_transit')}
+                onClick={() => {
+                  setShowTargetWarning(false);
+                  onSetTarget('lunar_transit');
+                }}
                 className={`py-1.5 px-1 rounded text-center transition-all cursor-pointer border ${
                   target === 'lunar_transit'
-                    ? 'bg-sky-500/25 border-sky-400 text-sky-200 font-semibold shadow-xs'
+                    ? 'bg-sky-500/25 border-sky-400 text-sky-200 font-semibold shadow-xs ring-1 ring-sky-400'
+                    : showTargetWarning
+                    ? 'bg-rose-950/40 border-rose-500/70 text-slate-300 hover:text-white animate-pulse'
                     : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
                 }`}
               >
                 Moon Landing
               </button>
               <button
-                onClick={() => onSetTarget('mars_transfer')}
+                onClick={() => {
+                  setShowTargetWarning(false);
+                  onSetTarget('mars_transfer');
+                }}
                 className={`py-1.5 px-1 rounded text-center transition-all cursor-pointer border ${
                   target === 'mars_transfer'
-                    ? 'bg-sky-500/25 border-sky-400 text-sky-200 font-semibold shadow-xs'
+                    ? 'bg-amber-500/25 border-amber-400 text-amber-200 font-semibold shadow-xs ring-1 ring-amber-400'
+                    : showTargetWarning
+                    ? 'bg-rose-950/40 border-rose-500/70 text-slate-300 hover:text-white animate-pulse'
                     : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
                 }`}
               >
                 Mars Landing
               </button>
             </div>
+
+            {/* Target Warning Notice if Launch clicked without destination */}
+            {showTargetWarning && (
+              <div className="mt-2 p-2 rounded-lg bg-rose-950/90 border border-rose-500/80 text-rose-200 text-[11px] font-mono-tech flex items-center gap-2 animate-bounce">
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>Please select Moon Landing or Mars Landing first before launching!</span>
+              </div>
+            )}
           </div>
 
           {/* Timeline Scrubber */}
@@ -235,7 +243,14 @@ export const LaunchPreparationModule: React.FC<LaunchPreparationModuleProps> = (
               max="1"
               step="0.005"
               value={launchProgress}
-              onChange={(e) => onSetLaunchProgress(parseFloat(e.target.value))}
+              onChange={(e) => {
+                if (!target && parseFloat(e.target.value) > 0.05) {
+                  setShowTargetWarning(true);
+                  return;
+                }
+                setShowTargetWarning(false);
+                onSetLaunchProgress(parseFloat(e.target.value));
+              }}
               className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-ew-resize accent-sky-400 my-1.5"
             />
 
@@ -252,7 +267,14 @@ export const LaunchPreparationModule: React.FC<LaunchPreparationModuleProps> = (
           <div className="pt-1 flex items-center gap-2">
             {isCompleted ? (
               <button
-                onClick={onResetAndLaunch}
+                onClick={() => {
+                  if (!target) {
+                    setShowTargetWarning(true);
+                    return;
+                  }
+                  setShowTargetWarning(false);
+                  onResetAndLaunch();
+                }}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded text-xs font-tech font-bold uppercase tracking-wider bg-emerald-400 hover:bg-emerald-300 text-slate-950 transition-all cursor-pointer shadow-md active:scale-95"
               >
                 <Rocket className="w-3.5 h-3.5" />
@@ -261,6 +283,11 @@ export const LaunchPreparationModule: React.FC<LaunchPreparationModuleProps> = (
             ) : (
               <button
                 onClick={() => {
+                  if (!target) {
+                    setShowTargetWarning(true);
+                    return;
+                  }
+                  setShowTargetWarning(false);
                   onToggleAutoLaunch();
                   if (!autoLaunchActive) aerospaceAudio.playRealRocketLaunchSound();
                 }}
@@ -334,9 +361,7 @@ export const LaunchPreparationModule: React.FC<LaunchPreparationModuleProps> = (
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-900/60 text-emerald-300 text-[11px] font-tech font-bold uppercase tracking-wide">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                 <span>
-                  {target === 'earth_orbit'
-                    ? 'EARTH ORBIT ACHIEVED — PARKED'
-                    : target === 'lunar_transit'
+                  {target === 'lunar_transit'
                     ? 'LUNAR ARRIVAL ACHIEVED — PARKED'
                     : 'MARS ARRIVAL ACHIEVED — PARKED'}
                 </span>
@@ -554,7 +579,7 @@ export const LaunchPreparationModule: React.FC<LaunchPreparationModuleProps> = (
             </div>
           )}
 
-          {/* TAB 3: SPACECRAFT FLEET SELECTION ("SPACE LIST" / স্পেস লিস্ট) */}
+          {/* TAB 3: SPACECRAFT FLEET SELECTION ("SPACE FLEET LIST") */}
           {activeTab === 'fleet' && (
             <div className="space-y-2 animate-in fade-in duration-200">
               <div className="flex items-center justify-between px-1 mb-1">

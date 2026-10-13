@@ -23,6 +23,8 @@ import { CinematicLandingTransition } from './components/CinematicLandingTransit
 import { SettingsModal } from './components/SettingsModal';
 import { WelcomeTourModal } from './components/WelcomeTourModal';
 import { SpacecraftInspectionModal } from './components/SpacecraftInspectionModal';
+import { FullscreenLaunchModal } from './components/FullscreenLaunchModal';
+import { SurfaceControlGuideModal } from './components/SurfaceControlGuideModal';
 import { CELESTIAL_BODIES, SPACECRAFT_FLEET } from './data/planets';
 import { INITIAL_WAYPOINTS } from './data/waypoints';
 import { nasaService } from './services/nasaApi';
@@ -55,8 +57,8 @@ export default function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('launch-simulator');
   const [selectedPlanetId, setSelectedPlanetId] = useState<PlanetId>('earth');
   const [missionPhase, setMissionPhase] = useState<MissionPhase>('STANDBY');
-  const [launchTarget, setLaunchTarget] = useState<LaunchTarget>('lunar_transit');
-  const launchTargetRef = useRef<LaunchTarget>('lunar_transit');
+  const [launchTarget, setLaunchTarget] = useState<LaunchTarget>(null);
+  const launchTargetRef = useRef<LaunchTarget>(null);
   const [selectedSpacecraft, setSelectedSpacecraft] = useState<SpacecraftOption>(SPACECRAFT_FLEET[0]);
 
   // Mission Flow State Machine (Continuous journey to surface)
@@ -149,6 +151,8 @@ export default function App() {
   const [showNasaArchiveModal, setShowNasaArchiveModal] = useState(false);
   const [showNasaDataModal, setShowNasaDataModal] = useState(false);
   const [showHeritageModal, setShowHeritageModal] = useState(false);
+  const [showFullscreenLaunchModal, setShowFullscreenLaunchModal] = useState(false);
+  const [showSurfaceGuideModal, setShowSurfaceGuideModal] = useState(false);
 
   const isSurfaceMode = viewMode === 'moon' || viewMode === 'mars';
   const surfaceEnvironment: 'moon' | 'mars' = viewMode === 'mars' ? 'mars' : 'moon';
@@ -198,10 +202,6 @@ export default function App() {
             setViewMode(targetEnv);
             setMissionFlowState('LANDING');
             setShowLandingSequence(true);
-          } else if (currentTgt === 'earth_orbit') {
-            // Automatic smooth transition to Solar System 3D view focused on Earth
-            setSelectedPlanetId('earth');
-            setViewMode('solar-system');
           }
         }
       },
@@ -270,6 +270,7 @@ export default function App() {
       surfaceSceneRef.current.triggerLandingSequence(() => {
         setShowLandingSequence(false);
         setMissionFlowState('DRIVE_MODE_ACTIVE');
+        setShowSurfaceGuideModal(true);
       });
     }
   }, [showLandingSequence]);
@@ -323,6 +324,7 @@ export default function App() {
     }
     if (mode === 'launch-simulator') {
       setViewMode('launch-simulator');
+      setShowFullscreenLaunchModal(true);
       setAutoLaunchActive(false);
       if (sceneRef.current) {
         sceneRef.current.resetFlightToPad();
@@ -789,13 +791,41 @@ export default function App() {
       {showWelcomeModal && (
         <WelcomeTourModal
           onStartMission={() => {
-            setViewMode('mission-control');
-            handleFocusPlanet('earth');
+            setShowWelcomeModal(false);
+            setShowFullscreenLaunchModal(true);
           }}
           onExploreSolarSystem={() => {
             setViewMode('solar-system');
           }}
           onClose={handleCloseWelcome}
+        />
+      )}
+
+      {showFullscreenLaunchModal && (
+        <FullscreenLaunchModal
+          currentTarget={launchTarget}
+          selectedSpacecraft={selectedSpacecraft}
+          onSelectTarget={(tgt) => {
+            setLaunchTarget(tgt);
+            launchTargetRef.current = tgt;
+            sceneRef.current?.setLaunchTarget(tgt);
+          }}
+          onSelectSpacecraft={(craft) => setSelectedSpacecraft(craft)}
+          onStartLaunch={() => {
+            setViewMode('launch-simulator');
+            handleResetAndLaunch();
+          }}
+          onZoomOutView={() => {
+            sceneRef.current?.focusOnPlanet('earth');
+          }}
+          onClose={() => setShowFullscreenLaunchModal(false)}
+        />
+      )}
+
+      {showSurfaceGuideModal && isSurfaceMode && (
+        <SurfaceControlGuideModal
+          environment={surfaceEnvironment}
+          onContinue={() => setShowSurfaceGuideModal(false)}
         />
       )}
 

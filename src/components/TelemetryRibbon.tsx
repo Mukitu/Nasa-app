@@ -33,14 +33,12 @@ export const TelemetryRibbon: React.FC<TelemetryRibbonProps> = ({
 
   const getTargetLabel = () => {
     switch (target) {
-      case 'earth_orbit':
-        return 'EARTH ORBIT';
       case 'lunar_transit':
         return 'LUNAR TRANSIT';
       case 'mars_transfer':
         return 'MARS TRANSFER';
       default:
-        return 'EARTH ORBIT';
+        return 'PENDING SELECTION';
     }
   };
 

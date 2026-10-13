@@ -87,14 +87,14 @@ export const RoverHUD: React.FC<RoverHUDProps> = ({
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const lastNarratedWpRef = useRef<string | null>(null);
 
-  // Automatically start voice narration when rover enters trigger radius (<12m)
+  // Automatically start voice narration when rover enters trigger radius (<15m)
   useEffect(() => {
-    if (nearestAnomaly && nearestDistance <= 12) {
+    if (nearestAnomaly && nearestDistance <= 15) {
       if (lastNarratedWpRef.current !== nearestAnomaly.id) {
         lastNarratedWpRef.current = nearestAnomaly.id;
         speechNarrationService.narrateWaypoint(nearestAnomaly);
       }
-    } else if (nearestDistance > 18) {
+    } else if (nearestDistance > 15) {
       // Reset trigger lock when moving away
       lastNarratedWpRef.current = null;
     }

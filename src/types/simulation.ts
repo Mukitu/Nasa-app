@@ -59,7 +59,7 @@ export interface PlanetData {
   parentBody?: string;
 }
 
-export type LaunchTarget = 'earth_orbit' | 'lunar_transit' | 'mars_transfer';
+export type LaunchTarget = 'lunar_transit' | 'mars_transfer' | null;
 
 export interface SpacecraftOption {
   id: string;

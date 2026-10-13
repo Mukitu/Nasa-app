@@ -1274,20 +1274,20 @@ export class SurfaceExplorerScene {
         colorHex = 0xf59e0b; // Gold for active target
       }
 
-      // Vertical Light Pillar
-      const pillarGeo = new THREE.CylinderGeometry(0.2, isTarget ? 0.6 : 0.4, isTarget ? 35 : 25, 12);
+      // Subtle Light Pillar
+      const pillarGeo = new THREE.CylinderGeometry(0.1, isTarget ? 0.3 : 0.2, isTarget ? 14 : 10, 12);
       const pillarMat = new THREE.MeshBasicMaterial({
         color: colorHex,
         transparent: true,
-        opacity: isTarget ? 0.55 : 0.35,
+        opacity: isTarget ? 0.35 : 0.2,
         depthWrite: false,
       });
       const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-      pillar.position.set(0, isTarget ? 17.5 : 12.5, 0);
+      pillar.position.set(0, isTarget ? 7.0 : 5.0, 0);
       beaconGroup.add(pillar);
 
-      // Hovering Diamond / Marker Crystal
-      const crystalGeo = new THREE.OctahedronGeometry(isTarget ? 1.6 : 1.2, 0);
+      // Hovering Diamond / Marker Crystal - low height right over artifact
+      const crystalGeo = new THREE.OctahedronGeometry(isTarget ? 0.9 : 0.7, 0);
       const crystalMat = new THREE.MeshStandardMaterial({
         color: colorHex,
         emissive: colorHex,
@@ -1296,7 +1296,7 @@ export class SurfaceExplorerScene {
         roughness: 0.2,
       });
       const crystal = new THREE.Mesh(crystalGeo, crystalMat);
-      crystal.position.set(0, isTarget ? 7.5 : 6.0, 0);
+      crystal.position.set(0, isTarget ? 2.0 : 1.7, 0);
       crystal.userData = { isCrystal: true, isTarget };
       beaconGroup.add(crystal);
 
@@ -1324,8 +1324,73 @@ export class SurfaceExplorerScene {
       ring.position.set(0, 0.1, 0);
       beaconGroup.add(ring);
 
+      // 3D Rectangular Floating Name Banner (Eye-level directly over artifact)
+      const nameBanner = this.create3DNameBanner(wp.name, colorHex);
+      beaconGroup.add(nameBanner);
+
       this.beaconsGroup.add(beaconGroup);
     });
+  }
+
+  /**
+   * Creates a 3D Rectangular Name Banner using procedural HTML canvas texture
+   */
+  private create3DNameBanner(name: string, colorHex: number): THREE.Mesh {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d')!;
+
+    const hexStr = '#' + colorHex.toString(16).padStart(6, '0');
+
+    // Rounded rectangle background
+    ctx.fillStyle = 'rgba(6, 10, 22, 0.92)';
+    ctx.strokeStyle = hexStr;
+    ctx.lineWidth = 6;
+
+    const x = 8, y = 8, w = 496, h = 112, r = 16;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Text Label - crisp and legible
+    ctx.font = 'bold 30px sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    let displayTitle = name;
+    if (displayTitle.length > 26) {
+      displayTitle = displayTitle.substring(0, 24) + '...';
+    }
+    ctx.fillText(displayTitle, 256, 64);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+
+    const mat = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+
+    // Compact proportional banner (3.8m wide by 1.1m tall) positioned at rover eye level (2.4m)
+    const planeGeo = new THREE.PlaneGeometry(3.8, 1.1);
+    const mesh = new THREE.Mesh(planeGeo, mat);
+    mesh.position.set(0, 2.4, 0); // Directly above landmark at natural eye level
+    mesh.userData = { isNameBanner: true };
+    return mesh;
   }
 
   /**
@@ -1866,7 +1931,12 @@ export class SurfaceExplorerScene {
       const crystal = beacon.children.find((c) => c.userData.isCrystal);
       if (crystal) {
         crystal.rotation.y = elapsedTime * (crystal.userData.isTarget ? 2.5 : 1.5);
-        crystal.position.y = (crystal.userData.isTarget ? 7.5 : 6.0) + Math.sin(elapsedTime * 2.5) * 0.4;
+        crystal.position.y = (crystal.userData.isTarget ? 2.0 : 1.7) + Math.sin(elapsedTime * 2.0) * 0.12;
+      }
+      const nameBanner = beacon.children.find((c) => c.userData.isNameBanner);
+      if (nameBanner) {
+        nameBanner.position.set(0, crystal?.userData.isTarget ? 2.6 : 2.3, 0);
+        nameBanner.quaternion.copy(this.camera.quaternion);
       }
     });
 
@@ -1892,7 +1962,7 @@ export class SurfaceExplorerScene {
     this.nearestDistance = Math.round(minD * 10) / 10;
     this.nearestWaypoint = closestWp;
 
-    if (minD <= 12 && closestWp) {
+    if (minD <= 15 && closestWp) {
       this.callbacks.onAnomalyProximity?.(closestWp, this.nearestDistance);
     } else {
       this.callbacks.onAnomalyProximity?.(null, this.nearestDistance);

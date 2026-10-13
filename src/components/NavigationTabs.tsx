@@ -23,9 +23,8 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
   onSelectView,
 }) => {
   const tabs: { id: ViewMode; label: string; icon: React.ReactNode; badge?: number }[] = [
-    { id: 'launch-simulator', label: 'Space Launch (স্পেস লঞ্চ)', icon: <Rocket className="w-3.5 h-3.5" /> },
-    { id: 'solar-system', label: 'Solar System (সৌরজগৎ)', icon: <Orbit className="w-3.5 h-3.5" /> },
-    { id: 'archive', label: 'NASA Archive Search (নাসা আর্কাইভ)', icon: <Search className="w-3.5 h-3.5" /> },
+    { id: 'launch-simulator', label: 'Space Launch', icon: <Rocket className="w-3.5 h-3.5" /> },
+    { id: 'solar-system', label: 'Solar System', icon: <Orbit className="w-3.5 h-3.5" /> },
   ];
 
   return (
