@@ -61,11 +61,11 @@ export const SpokenNarrationBanner: React.FC<SpokenNarrationBannerProps> = ({
   const isNarratingThis = isSpeaking || isPaused || Boolean(currentSubtitle);
 
   return (
-    <div className="pointer-events-auto fixed bottom-14 sm:bottom-20 left-1/2 -translate-x-1/2 z-30 w-full max-w-3xl px-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
-      <div className="glass-panel rounded-2xl p-4 sm:p-5 border border-sky-400/80 bg-slate-950/95 shadow-2xl backdrop-blur-xl flex flex-col md:flex-row gap-4 sm:gap-5 items-center">
+    <div className="pointer-events-auto fixed top-16 sm:top-auto sm:bottom-20 left-1/2 -translate-x-1/2 z-30 w-[calc(100vw-1rem)] sm:w-full max-w-3xl px-2 sm:px-3 animate-in fade-in slide-in-from-top-3 sm:slide-in-from-bottom-4 duration-300">
+      <div className="glass-panel rounded-2xl p-3 sm:p-5 border border-sky-400/80 bg-slate-950/95 shadow-2xl backdrop-blur-xl flex flex-col md:flex-row gap-3 sm:gap-5 items-stretch md:items-center max-h-[48vh] sm:max-h-none overflow-y-auto custom-scrollbar">
         {/* LEFT SIDE: AUTHENTIC NASA PHOTO (Clear & Prominent) */}
         <div className="w-full md:w-5/12 shrink-0">
-          <div className="relative rounded-xl overflow-hidden bg-black border border-sky-500/30 shadow-lg aspect-[4/3] flex items-center justify-center">
+          <div className="relative rounded-xl overflow-hidden bg-black border border-sky-500/30 shadow-lg aspect-[16/9] sm:aspect-[4/3] max-h-36 sm:max-h-none flex items-center justify-center">
             <img
               src={activeWaypoint.imageUrl}
               alt={activeWaypoint.name}
@@ -77,10 +77,10 @@ export const SpokenNarrationBanner: React.FC<SpokenNarrationBannerProps> = ({
                 }
               }}
             />
-            <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/75 backdrop-blur-md text-[9px] font-mono-tech text-sky-300 border border-sky-400/30 font-bold">
-              NASA ARCHIVE PHOTO
+            <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 px-1.5 sm:px-2 py-0.5 rounded bg-black/75 backdrop-blur-md text-[8px] sm:text-[9px] font-mono-tech text-sky-300 border border-sky-400/30 font-bold">
+              NASA ARCHIVE
             </div>
-            <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/75 backdrop-blur-md text-[9px] font-mono-tech text-emerald-300 border border-emerald-500/30">
+            <div className="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2 px-1.5 sm:px-2 py-0.5 rounded bg-black/75 backdrop-blur-md text-[8px] sm:text-[9px] font-mono-tech text-emerald-300 border border-emerald-500/30">
               Landed {activeWaypoint.landingYear}
             </div>
           </div>

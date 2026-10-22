@@ -94,6 +94,8 @@ export default function App() {
   const [selectedWaypointId, setSelectedWaypointId] = useState<string | null>(null);
   const [showRoverRouteLine, setShowRoverRouteLine] = useState(true);
   const [isRoverPaused, setIsRoverPaused] = useState(false);
+  const [explorationMode, setExplorationMode] = useState<'walking' | 'driving'>('walking');
+  const [canEnterRover, setCanEnterRover] = useState(false);
 
   // Phase 4: Discovery Collection State (Session-level in-memory)
   const [collectedDiscoveries, setCollectedDiscoveries] = useState<CollectedDiscovery[]>(() => {
@@ -252,6 +254,10 @@ export default function App() {
           onPauseChange: (p) => {
             setIsRoverPaused(p);
           },
+          onRoverInteractionStateChange: (canEnter, inRover) => {
+            setCanEnterRover(canEnter);
+            setExplorationMode(inRover ? 'driving' : 'walking');
+          },
         }
       );
       if (selectedWaypointId) {
@@ -259,10 +265,18 @@ export default function App() {
       }
       surfaceScene.setRouteLineVisible(showRoverRouteLine);
       surfaceSceneRef.current = surfaceScene;
+
+      if (showLandingSequence) {
+        surfaceScene.triggerLandingSequence(() => {
+          setShowLandingSequence(false);
+          setMissionFlowState('DRIVE_MODE_ACTIVE');
+          setShowSurfaceGuideModal(true);
+        });
+      }
     } else {
       surfaceSceneRef.current.setEnvironment(surfaceEnvironment);
     }
-  }, [isSurfaceMode, surfaceEnvironment, soundEnabled, selectedWaypointId, showRoverRouteLine]);
+  }, [isSurfaceMode, surfaceEnvironment, soundEnabled, selectedWaypointId, showRoverRouteLine, showLandingSequence]);
 
   // Trigger 3D Live Surface Landing on Moon / Mars map
   useEffect(() => {
@@ -430,6 +444,8 @@ export default function App() {
   const handleExploreDestination = useCallback(() => {
     speechNarrationService.unlockAudio();
     if (launchTarget === 'lunar_transit' || launchTarget === 'mars_transfer') {
+      const destEnv = launchTarget === 'lunar_transit' ? 'moon' : 'mars';
+      setViewMode(destEnv);
       setShowLandingSequence(true);
       setMissionFlowState('LANDING');
     } else {
@@ -690,6 +706,16 @@ export default function App() {
             nearestAnomaly={nearestAnomaly}
             nearestDistance={nearestAnomalyDistance}
             selectedWaypointId={selectedWaypointId}
+            explorationMode={explorationMode}
+            canEnterRover={canEnterRover}
+            onEnterRover={() => {
+              surfaceSceneRef.current?.enterRover();
+              if (soundEnabled) aerospaceAudio.playBeep(980, 0.05);
+            }}
+            onExitRover={() => {
+              surfaceSceneRef.current?.exitRover();
+              if (soundEnabled) aerospaceAudio.playBeep(760, 0.05);
+            }}
             isPaused={isRoverPaused}
             showRouteLine={showRoverRouteLine}
             onToggleRouteLine={() => {
@@ -736,6 +762,16 @@ export default function App() {
             }}
             onVirtualControl={(f, t, b) => {
               surfaceSceneRef.current?.setControlInput(f, t, b);
+            }}
+            onJoystickMove={(x, y) => {
+              surfaceSceneRef.current?.setJoystickInput(x, y);
+            }}
+            onJoystickStop={() => {
+              surfaceSceneRef.current?.setJoystickInput(0, 0);
+            }}
+            onRecenterCamera={() => {
+              surfaceSceneRef.current?.recenterCamera();
+              if (soundEnabled) aerospaceAudio.playBeep(1100, 0.03);
             }}
           />
         )}

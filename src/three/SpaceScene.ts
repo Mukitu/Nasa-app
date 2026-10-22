@@ -78,6 +78,8 @@ export class SpaceScene {
   private shockDiamonds: THREE.Mesh[] = [];
   private billowingFireGroup: THREE.Group | null = null;
   private stationPlatformGroup: THREE.Group | null = null;
+  private lunarTrajectoryCurve!: THREE.CatmullRomCurve3;
+  private marsTrajectoryCurve!: THREE.CatmullRomCurve3;
 
   // State
   private currentViewMode: ViewMode = 'mission-control';
@@ -132,7 +134,7 @@ export class SpaceScene {
       alpha: false,
     });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.15;
     container.appendChild(this.renderer.domElement);
@@ -1453,6 +1455,35 @@ export class SpaceScene {
     this.rocketMesh.add(this.exhaustParticles);
 
     this.launchPadGroup.add(this.rocketMesh);
+
+    // Initialize mathematically verified aerospace trajectory curves (Centripetal Catmull-Rom splines)
+    // 1. Lunar Trajectory Corridor: Pad 39B -> Pitch-over gravity turn -> Trans-Lunar Injection -> Lunar Orbit
+    const lunarPoints = [
+      new THREE.Vector3(0, 3, 0),        // Pad 39B Surface
+      new THREE.Vector3(0, 18, 0),       // Pure vertical climb clearing umbilical tower
+      new THREE.Vector3(-2.2, 36, -2.6), // Initial aerodynamic gravity turn pitch-over
+      new THREE.Vector3(-10.5, 62, -12.5),// Max-Q supersonic climb through stratosphere
+      new THREE.Vector3(-24.0, 88, -27.5),// Upper stage ignition & orbital climb
+      new THREE.Vector3(-46.0, 102, -52.0),// Trans-Lunar Injection (TLI burn into deep space)
+      new THREE.Vector3(-74.0, 96, -82.0), // Deep cislunar transfer coast
+      new THREE.Vector3(-96.0, 86, -104.0),// Lunar gravitational capture approach
+      new THREE.Vector3(-108.0, 81, -118.0),// Final approach corridor facing Moon (-110, 80, -120)
+    ];
+    this.lunarTrajectoryCurve = new THREE.CatmullRomCurve3(lunarPoints, false, 'centripetal');
+
+    // 2. Mars Transfer Corridor: Pad 39B -> Gravity turn -> Trans-Mars Injection -> Mars Orbit
+    const marsPoints = [
+      new THREE.Vector3(0, 3, 0),        // Pad 39B Surface
+      new THREE.Vector3(0, 18, 0),       // Pure vertical climb clearing umbilical tower
+      new THREE.Vector3(2.6, 36, -3.2),  // Initial aerodynamic gravity turn pitch-over
+      new THREE.Vector3(14.0, 62, -16.5),// Max-Q supersonic climb through stratosphere
+      new THREE.Vector3(32.0, 88, -38.0),// Upper stage ignition & orbital climb
+      new THREE.Vector3(62.0, 100, -74.0),// Trans-Mars Injection (TMI burn into deep space)
+      new THREE.Vector3(94.0, 82, -114.0),// Interplanetary transfer coast
+      new THREE.Vector3(118.0, 62, -142.0),// Mars gravitational capture approach
+      new THREE.Vector3(128.0, 52, -157.0),// Final approach corridor facing Mars (130, 50, -160)
+    ];
+    this.marsTrajectoryCurve = new THREE.CatmullRomCurve3(marsPoints, false, 'centripetal');
   }
 
   private setupInteractionListeners(): void {
@@ -1752,48 +1783,72 @@ export class SpaceScene {
     this.simulatedVelocityKmh = velocityKmh;
     this.missionPhase = phase;
 
-    // 2. Physical Rocket Kinematics & Transformation
+    // 2. Physical Rocket Kinematics & Transformation (Single Authoritative Controller)
     if (this.rocketMesh) {
-      if (p <= 0.65) {
-        // Climbing from launch pad
-        const climbY = 3 + Math.pow(p / 0.65, 1.8) * 110;
-        this.rocketMesh.position.set(0, climbY, 0);
+      const activeCurve = target === 'mars_transfer' ? this.marsTrajectoryCurve : this.lunarTrajectoryCurve;
+      const pos = activeCurve.getPointAt(p);
+      const tangent = activeCurve.getTangentAt(p);
 
-        // Aerodynamic Gravity Turn
-        const pitchAngle = Math.min(Math.PI / 2.2, Math.pow(p / 0.65, 2) * (Math.PI / 2.3));
-        this.rocketMesh.rotation.set(pitchAngle, 0, 0);
+      this.rocketMesh.position.copy(pos);
 
-        // SRB Boosters
-        if (this.srbLeftMesh && this.srbRightMesh) {
-          if (p > 0.55) {
-            const sepDist = (p - 0.55) * 35;
-            this.srbLeftMesh.position.set(-2 - sepDist, 5.5 - sepDist * 0.4, 0);
-            this.srbRightMesh.position.set(2 + sepDist, 5.5 - sepDist * 0.4, 0);
-            this.srbLeftMesh.rotation.z = -sepDist * 0.1;
-            this.srbRightMesh.rotation.z = sepDist * 0.1;
-          } else {
-            this.srbLeftMesh.position.set(-2, 5.5, 0);
-            this.srbRightMesh.position.set(2, 5.5, 0);
-            this.srbLeftMesh.rotation.set(0, 0, 0);
-            this.srbRightMesh.rotation.set(0, 0, 0);
-          }
-        }
+      // Authoritative Rocket Orientation Controller:
+      // In local coordinates: nose is at +Y, engine nozzles are at -Y.
+      // During ascent and space travel: longitudinal axis (+Y) aligns with velocity tangent.
+      // During destination approach (p >= 0.60): nose continuously points forward toward the destination (Moon or Mars),
+      // with rear engine nozzles strictly trailing behind.
+      const destPos = target === 'mars_transfer' 
+        ? new THREE.Vector3(130, 50, -160) 
+        : new THREE.Vector3(-110, 80, -120);
+
+      const toDest = destPos.clone().sub(pos).normalize();
+      const tangentNorm = tangent.clone().normalize();
+      
+      let forward: THREE.Vector3;
+      if (p < 0.60) {
+        forward = tangentNorm;
       } else {
-        // Orbit and Deep Space Transit: smooth trajectory with safe destination stopping
-        const transitT = (p - 0.65) / 0.35; // 0 to 1
+        // Smoothly blend from tangent to destination vector so nose faces Moon/Mars directly
+        const blendFactor = Math.min(1.0, (p - 0.60) / 0.28);
+        forward = tangentNorm.clone().lerp(toDest, blendFactor).normalize();
+      }
 
-        if (target === 'mars_transfer') {
-          const startPos = new THREE.Vector3(0, 120, 0);
-          const endPos = new THREE.Vector3(130, 78, -160); // Settles directly over Mars globe
-          const currentPos = new THREE.Vector3().lerpVectors(startPos, endPos, Math.min(1, transitT));
-          this.rocketMesh.position.copy(currentPos);
-          this.rocketMesh.rotation.set(0.45, -0.25, 0);
+      // Stable continuous reference vector (smoothly transitions from +Z during vertical climb to world +Y)
+      let upRef: THREE.Vector3;
+      if (Math.abs(forward.y) > 0.92) {
+        upRef = new THREE.Vector3(0, 0, 1);
+      } else {
+        upRef = new THREE.Vector3(0, 1, 0);
+      }
+
+      let right = new THREE.Vector3().crossVectors(forward, upRef).normalize();
+      if (right.lengthSq() < 0.001) {
+        right = new THREE.Vector3(1, 0, 0);
+      }
+      const correctedUp = new THREE.Vector3().crossVectors(right, forward).normalize();
+      const rotMatrix = new THREE.Matrix4().makeBasis(right, forward, correctedUp);
+      this.rocketMesh.quaternion.setFromRotationMatrix(rotMatrix);
+
+      // SRB Boosters Separation
+      if (this.srbLeftMesh && this.srbRightMesh) {
+        if (p > 0.42 && p <= 0.65) {
+          this.srbLeftMesh.visible = true;
+          this.srbRightMesh.visible = true;
+          const sepT = (p - 0.42) / 0.23;
+          const sepDist = sepT * 26;
+          this.srbLeftMesh.position.set(-2 - sepDist, 5.5 - sepDist * 0.35, 0);
+          this.srbRightMesh.position.set(2 + sepDist, 5.5 - sepDist * 0.35, 0);
+          this.srbLeftMesh.rotation.z = -sepT * 0.35;
+          this.srbRightMesh.rotation.z = sepT * 0.35;
+        } else if (p > 0.65) {
+          this.srbLeftMesh.visible = false;
+          this.srbRightMesh.visible = false;
         } else {
-          const startPos = new THREE.Vector3(0, 120, 0);
-          const endPos = new THREE.Vector3(-110, 102, -120); // Settles directly over Moon globe
-          const currentPos = new THREE.Vector3().lerpVectors(startPos, endPos, Math.min(1, transitT));
-          this.rocketMesh.position.copy(currentPos);
-          this.rocketMesh.rotation.set(0.45, 0.25, 0);
+          this.srbLeftMesh.visible = true;
+          this.srbRightMesh.visible = true;
+          this.srbLeftMesh.position.set(-2, 5.5, 0);
+          this.srbRightMesh.position.set(2, 5.5, 0);
+          this.srbLeftMesh.rotation.set(0, 0, 0);
+          this.srbRightMesh.rotation.set(0, 0, 0);
         }
       }
     }
@@ -1865,51 +1920,68 @@ export class SpaceScene {
     if (this.currentViewMode !== 'launch-simulator' || this.launchCameraAngle === 'free') return;
 
     const basePadX = 1000;
-    const rocketPos = this.rocketMesh ? this.rocketMesh.position : new THREE.Vector3(0, 3, 0);
-    const targetLookAt = new THREE.Vector3(basePadX + rocketPos.x, rocketPos.y + 4, rocketPos.z);
-    this.cameraLookAtTarget.copy(targetLookAt);
+    const rPos = this.rocketMesh ? this.rocketMesh.position : new THREE.Vector3(0, 3, 0);
+    const worldRocket = new THREE.Vector3(basePadX + rPos.x, rPos.y, rPos.z);
+
+    // Dynamic focal point: centered smoothly on the rocket body
+    this.cameraLookAtTarget.set(worldRocket.x, worldRocket.y + 4, worldRocket.z);
 
     if (this.launchCameraAngle === 'pad') {
-      if (p <= 0.25) {
-        this.camera.position.set(basePadX + 42, 14, 42);
-      } else if (p <= 0.65) {
-        this.camera.position.set(basePadX + 35, rocketPos.y * 0.4 + 6, 35);
-      } else {
-        this.camera.position.set(basePadX + rocketPos.x + 25, rocketPos.y + 12, rocketPos.z + 35);
-      }
-      this.camera.lookAt(targetLookAt);
-    } else if (this.launchCameraAngle === 'tower') {
-      if (p <= 0.25) {
-        this.camera.position.set(basePadX - 8, 22, 5);
-      } else {
-        this.camera.position.set(basePadX - 12, rocketPos.y * 0.6 + 18, 12);
-      }
-      this.camera.lookAt(targetLookAt);
-    } else if (this.launchCameraAngle === 'ascent') {
-      this.camera.position.set(
-        basePadX + rocketPos.x - 8,
-        Math.max(2, rocketPos.y - 12),
-        rocketPos.z - 14
-      );
-      this.camera.lookAt(targetLookAt);
-    } else if (this.launchCameraAngle === 'orbital') {
-      if (p < 0.5) {
-        this.camera.position.set(basePadX + 50, 45, 60);
-      } else {
+      if (p < 0.60) {
+        // Ground pad tracking camera: smoothly zooms out and pulls back as rocket ascends into space
+        const pull = Math.min(85, p * 125);
         this.camera.position.set(
-          basePadX + rocketPos.x + 40,
-          rocketPos.y + 30,
-          rocketPos.z + 55
+          basePadX + 38 + pull * 0.35,
+          14 + pull * 0.22,
+          38 + pull * 0.35
+        );
+      } else {
+        // Deep space interplanetary transit view smoothly tracking alongside the rocket & destination
+        const tBlend = Math.min(1.0, (p - 0.60) / 0.35);
+        const padCamX = basePadX + 38 + 85 * 0.35;
+        const padCamY = 14 + 85 * 0.22;
+        const padCamZ = 38 + 85 * 0.35;
+
+        const spaceCamX = worldRocket.x + 24;
+        const spaceCamY = worldRocket.y + 10;
+        const spaceCamZ = worldRocket.z + 28;
+
+        this.camera.position.set(
+          THREE.MathUtils.lerp(padCamX, spaceCamX, tBlend),
+          THREE.MathUtils.lerp(padCamY, spaceCamY, tBlend),
+          THREE.MathUtils.lerp(padCamZ, spaceCamZ, tBlend)
         );
       }
-      this.camera.lookAt(targetLookAt);
-    } else if (this.launchCameraAngle === 'spacecraft') {
+      this.camera.lookAt(this.cameraLookAtTarget);
+    } else if (this.launchCameraAngle === 'tower') {
+      // Umbilical tower view: tracks upward smoothly
+      const lift = Math.min(35, p * 50);
+      this.camera.position.set(basePadX - 8, 22 + lift, 5);
+      this.camera.lookAt(this.cameraLookAtTarget);
+    } else if (this.launchCameraAngle === 'ascent') {
+      // Aerodynamic ascent chase: smoothly follows behind and beneath the fire plume
       this.camera.position.set(
-        basePadX + rocketPos.x + 9,
-        rocketPos.y + 5,
-        rocketPos.z + 9
+        worldRocket.x + 8,
+        Math.max(4, worldRocket.y - 12),
+        worldRocket.z + 16
       );
-      this.camera.lookAt(targetLookAt);
+      this.camera.lookAt(this.cameraLookAtTarget);
+    } else if (this.launchCameraAngle === 'orbital') {
+      // Wide interplanetary perspective
+      this.camera.position.set(
+        worldRocket.x + 36,
+        worldRocket.y + 20,
+        worldRocket.z + 46
+      );
+      this.camera.lookAt(this.cameraLookAtTarget);
+    } else if (this.launchCameraAngle === 'spacecraft') {
+      // Close cinematic spacecraft inspection chase
+      this.camera.position.set(
+        worldRocket.x + 8,
+        worldRocket.y + 3,
+        worldRocket.z + 9
+      );
+      this.camera.lookAt(this.cameraLookAtTarget);
     }
   }
 

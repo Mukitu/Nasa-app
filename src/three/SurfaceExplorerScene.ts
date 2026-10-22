@@ -6,12 +6,23 @@ import {
   createMissionMarkingsTexture,
   createMarsParachuteTexture,
 } from './textures';
+import {
+  createAstronautModel,
+  AstronautActor,
+  updateAstronautAnimation,
+  setAstronautPose,
+} from './astronautModel';
+import {
+  createRealisticRoverModel,
+  RoverActor,
+} from './roverModel';
 
 export interface SurfaceSceneCallbacks {
   onTelemetryUpdate?: (telemetry: RoverTelemetry) => void;
   onAnomalyProximity?: (waypoint: SurfaceWaypoint | null, distanceMeters: number) => void;
   onWaypointsUpdate?: (waypoints: SurfaceWaypoint[]) => void;
   onPauseChange?: (isPaused: boolean) => void;
+  onRoverInteractionStateChange?: (canEnter: boolean, inRover: boolean) => void;
 }
 
 export class SurfaceExplorerScene {
@@ -34,6 +45,16 @@ export class SurfaceExplorerScene {
   private beaconsGroup: THREE.Group = new THREE.Group();
   private wheelTracksGroup: THREE.Group = new THREE.Group();
   private earthMesh: THREE.Mesh | null = null;
+  private historicalTraverseGroup: THREE.Group = new THREE.Group();
+
+  // Exploration Character & Mode: 'walking' (astronaut on foot) vs 'driving' (seated inside rover)
+  public explorationMode: 'walking' | 'driving' = 'walking';
+  private astronautActor: AstronautActor | null = null;
+  private astronautPosition = new THREE.Vector3(2.2, 0, 6);
+  private astronautHeading: number = 0; // In radians
+  private astronautSpeed: number = 0; // In meters per second
+  private canEnterRover: boolean = true;
+  private isAstronautInRover: boolean = false;
 
   // Live Surface Landing Sequence
   private isLandingSequenceActive: boolean = false;
@@ -46,7 +67,8 @@ export class SurfaceExplorerScene {
 
   // Rover Model & Parts
   private roverGroup: THREE.Group = new THREE.Group();
-  private roverChassis: THREE.Mesh | null = null;
+  private roverActor: RoverActor | null = null;
+  private roverChassis: THREE.Group | null = null;
   private wheelMeshes: THREE.Mesh[] = [];
   private wheelPivots: THREE.Group[] = [];
   private mastMesh: THREE.Group | null = null;
@@ -89,6 +111,9 @@ export class SurfaceExplorerScene {
   private inputForward: number = 0; // -1, 0, 1
   private inputTurn: number = 0; // -1 (left), 1 (right)
   private inputBrake: boolean = false;
+  private joystickActive: boolean = false;
+  private joystickX: number = 0;
+  private joystickY: number = 0;
 
   // Camera Settings
   private cameraMode: RoverCameraMode = 'follow';
@@ -142,7 +167,7 @@ export class SurfaceExplorerScene {
       alpha: false,
     });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = environment === 'moon' ? 1.2 : 1.05;
     this.renderer.shadowMap.enabled = true;
@@ -154,9 +179,10 @@ export class SurfaceExplorerScene {
     this.scene.add(this.rocksGroup);
     this.scene.add(this.wheelTracksGroup);
     this.scene.add(this.beaconsGroup);
+    this.scene.add(this.historicalTraverseGroup);
     this.scene.add(this.roverGroup);
 
-    // 3. Build Environment, Tracks & Rover
+    // 3. Build Environment, Tracks, Landed Spacecraft, Rover & Astronaut
     this.buildLightingAndAtmosphere();
     this.buildProceduralTerrain();
     this.buildLandedSpacecraft();
@@ -164,6 +190,8 @@ export class SurfaceExplorerScene {
     this.initWheelTracks();
     this.initRouteLine();
     this.buildRoverModel();
+    this.buildAstronautModel();
+    this.buildHistoricalTraversePathway();
     this.buildDustParticles();
     this.updateWaypointBeacons();
 
@@ -176,11 +204,21 @@ export class SurfaceExplorerScene {
     this.boundWheel = this.handleWheel.bind(this);
     this.setupControlListeners();
 
-    // Spawn rover safely on terrain
-    const startH = this.getTerrainHeight(0, 0);
-    this.roverPosition.set(0, startH + 0.55, 0);
+    // Spawn rover and astronaut safely on terrain
+    const startH = this.getTerrainHeight(0, 6);
+    this.roverPosition.set(0, startH + 0.55, 6);
     this.roverGroup.position.copy(this.roverPosition);
     this.lastTrackCenterPos.copy(this.roverPosition);
+
+    const astroH = this.getTerrainHeight(2.2, 6);
+    this.astronautPosition.set(2.2, astroH, 6);
+    if (this.astronautActor) {
+      this.astronautActor.group.position.copy(this.astronautPosition);
+      this.astronautActor.group.rotation.set(0, Math.PI, 0);
+    }
+    this.explorationMode = 'walking';
+    this.canEnterRover = true;
+    this.callbacks.onRoverInteractionStateChange?.(true, false);
 
     // Start Animation Loop
     this.startLoop();
@@ -704,10 +742,27 @@ export class SurfaceExplorerScene {
       this.flameMaterial.opacity = 0;
     }
 
-    const startZ = 0;
+    const startZ = 6;
     const startY = this.getTerrainHeight(0, startZ);
     this.roverPosition.set(0, startY + 0.55, startZ);
     this.roverGroup.position.copy(this.roverPosition);
+
+    const astroY = this.getTerrainHeight(2.2, startZ);
+    this.astronautPosition.set(2.2, astroY, startZ);
+    if (this.astronautActor) {
+      if (this.roverChassis) this.roverChassis.remove(this.astronautActor.group);
+      this.scene.add(this.astronautActor.group);
+      this.astronautActor.group.position.copy(this.astronautPosition);
+      this.astronautActor.group.rotation.set(0, Math.PI, 0);
+      this.astronautActor.leftLegGroup.rotation.x = 0;
+      this.astronautActor.rightLegGroup.rotation.x = 0;
+      this.astronautActor.leftArmGroup.rotation.x = 0;
+      this.astronautActor.rightArmGroup.rotation.x = 0;
+      this.astronautActor.torsoGroup.position.y = 0.95;
+    }
+    this.explorationMode = 'walking';
+    this.canEnterRover = true;
+    this.callbacks.onRoverInteractionStateChange?.(true, false);
     this.cameraMode = 'follow';
 
     const callback = this.landingOnCompleteCallback;
@@ -797,17 +852,34 @@ export class SurfaceExplorerScene {
       this.camera.position.set(8, terrainY + 4, rolloutZ + 12);
       this.camera.lookAt(0, terrainY + 1, rolloutZ);
     } else {
-      // Stage 4: Touchdown Complete & Direct Rover Control Unlocked!
+      // Stage 4: Touchdown Complete & Exploration Control Unlocked!
       if (this.landedSpacecraftGroup) {
         this.landedSpacecraftGroup.position.set(0, landerBaseY, 14);
       }
       if (this.landingParachuteGroup) {
         this.landingParachuteGroup.visible = false;
       }
-      const startZ = 0;
+      const startZ = 6;
       const startY = this.getTerrainHeight(0, startZ);
       this.roverPosition.set(0, startY + 0.55, startZ);
       this.roverGroup.position.copy(this.roverPosition);
+
+      const astroY = this.getTerrainHeight(2.2, startZ);
+      this.astronautPosition.set(2.2, astroY, startZ);
+      if (this.astronautActor) {
+        if (this.roverChassis) this.roverChassis.remove(this.astronautActor.group);
+        this.scene.add(this.astronautActor.group);
+        this.astronautActor.group.position.copy(this.astronautPosition);
+        this.astronautActor.group.rotation.set(0, Math.PI, 0);
+        this.astronautActor.leftLegGroup.rotation.x = 0;
+        this.astronautActor.rightLegGroup.rotation.x = 0;
+        this.astronautActor.leftArmGroup.rotation.x = 0;
+        this.astronautActor.rightArmGroup.rotation.x = 0;
+        this.astronautActor.torsoGroup.position.y = 0.95;
+      }
+      this.explorationMode = 'walking';
+      this.canEnterRover = true;
+      this.callbacks.onRoverInteractionStateChange?.(true, false);
 
       this.isLandingSequenceActive = false;
       this.cameraMode = 'follow';
@@ -1080,12 +1152,15 @@ export class SurfaceExplorerScene {
     const posAttr = this.routeLine.geometry.attributes.position as THREE.BufferAttribute;
     const count = 30;
 
+    const startX = this.explorationMode === 'walking' ? this.astronautPosition.x : this.roverPosition.x;
+    const startZ = this.explorationMode === 'walking' ? this.astronautPosition.z : this.roverPosition.z;
+
     for (let i = 0; i < count; i++) {
       const t = i / (count - 1);
-      const x = THREE.MathUtils.lerp(this.roverPosition.x, target.worldPos.x, t);
-      const z = THREE.MathUtils.lerp(this.roverPosition.z, target.worldPos.z, t);
-      // Elevate slightly above terrain so the route line hovers like a holo projection
-      const y = this.getTerrainHeight(x, z) + 0.45 + Math.sin(t * Math.PI) * 0.3;
+      const x = THREE.MathUtils.lerp(startX, target.worldPos.x, t);
+      const z = THREE.MathUtils.lerp(startZ, target.worldPos.z, t);
+      // Keep holographic route tightly hugging terrain so it does not float or clip
+      const y = this.getTerrainHeight(x, z) + 0.12;
       posAttr.setXYZ(i, x, y, z);
     }
 
@@ -1110,119 +1185,228 @@ export class SurfaceExplorerScene {
   }
 
   private buildRoverModel(): void {
-    const tileTex = createSpacecraftTileTexture();
-    this.roverChassis = new THREE.Mesh(
-      new THREE.BoxGeometry(1.6, 0.65, 2.3),
-      new THREE.MeshStandardMaterial({
-        map: tileTex,
-        color: 0xf8fafc,
-        metalness: 0.2,
-        roughness: 0.35,
-      })
-    );
-    this.roverChassis.castShadow = true;
-    this.roverChassis.receiveShadow = true;
-    this.roverGroup.add(this.roverChassis);
+    while (this.roverGroup.children.length > 0) {
+      const c = this.roverGroup.children[0];
+      this.roverGroup.remove(c);
+    }
 
-    // Gold solar panel deck
-    const solarGeo = new THREE.BoxGeometry(1.4, 0.06, 2.0);
-    const solarMat = new THREE.MeshStandardMaterial({
-      color: 0xd97706,
-      metalness: 0.85,
-      roughness: 0.2,
-    });
-    const solarDeck = new THREE.Mesh(solarGeo, solarMat);
-    solarDeck.position.set(0, 0.35, 0);
-    this.roverChassis.add(solarDeck);
+    this.roverActor = createRealisticRoverModel(this.environment);
+    this.roverChassis = this.roverActor.chassis;
+    this.wheelMeshes = this.roverActor.wheelMeshes;
+    this.wheelPivots = this.roverActor.wheelPivots;
+    this.mastMesh = this.roverActor.mastMesh;
+    this.headlightLeft = this.roverActor.headlightLeft;
+    this.headlightRight = this.roverActor.headlightRight;
 
-    // Mast-Cam Assembly
-    this.mastMesh = new THREE.Group();
-    this.mastMesh.position.set(0, 0.35, -0.85);
+    this.roverGroup.add(this.roverActor.group);
+  }
 
-    const mastPole = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.05, 0.05, 1.2, 12),
-      new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.8 })
-    );
-    mastPole.position.set(0, 0.6, 0);
-    this.mastMesh.add(mastPole);
+  private buildAstronautModel(): void {
+    if (this.astronautActor) {
+      if (this.roverChassis) this.roverChassis.remove(this.astronautActor.group);
+      this.scene.remove(this.astronautActor.group);
+      this.astronautActor = null;
+    }
 
-    const camHead = new THREE.Mesh(
-      new THREE.BoxGeometry(0.35, 0.2, 0.25),
-      new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.2 })
-    );
-    camHead.position.set(0, 1.25, 0);
+    this.astronautActor = createAstronautModel(this.environment);
 
-    const lensL = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.04, 0.04, 0.06, 12),
-      new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
-    );
-    lensL.rotateX(Math.PI / 2);
-    lensL.position.set(-0.09, 0, -0.13);
-    camHead.add(lensL);
+    if (this.explorationMode === 'driving' && this.roverChassis) {
+      this.roverChassis.add(this.astronautActor.group);
+      this.astronautActor.group.position.set(0, 0.36, 0.05);
+      this.astronautActor.group.rotation.set(0, 0, 0);
+      setAstronautPose(this.astronautActor, 'driving');
+    } else {
+      this.scene.add(this.astronautActor.group);
+      const y = this.getTerrainHeight(this.astronautPosition.x, this.astronautPosition.z);
+      this.astronautPosition.y = y;
+      this.astronautActor.group.position.copy(this.astronautPosition);
+      this.astronautActor.group.rotation.set(0, this.astronautHeading, 0);
+      setAstronautPose(this.astronautActor, 'standing');
+    }
+  }
 
-    const lensR = lensL.clone();
-    lensR.position.set(0.09, 0, -0.13);
-    camHead.add(lensR);
+  private buildHistoricalTraversePathway(): void {
+    while (this.historicalTraverseGroup.children.length > 0) {
+      const child = this.historicalTraverseGroup.children[0];
+      this.historicalTraverseGroup.remove(child);
+      if (child instanceof THREE.Line || child instanceof THREE.Mesh) {
+        child.geometry.dispose();
+      }
+    }
 
-    this.mastMesh.add(camHead);
-    this.roverChassis.add(this.mastMesh);
+    if (this.environment === 'moon') {
+      // Historical Apollo 12 to Surveyor 3 EVA-2 Traverse across Surveyor Crater Rim
+      // Apollo 12 LM Intrepid: (-45, -65), Surveyor 3: (-60, -40)
+      const points = [
+        new THREE.Vector3(-45, 0, -65),
+        new THREE.Vector3(-48, 0, -60),
+        new THREE.Vector3(-51, 0, -54),
+        new THREE.Vector3(-55, 0, -47),
+        new THREE.Vector3(-60, 0, -40),
+      ];
 
-    // High-gain antenna dish
-    const dishGeo = new THREE.CylinderGeometry(0.3, 0.1, 0.08, 16);
-    dishGeo.rotateX(0.4);
-    const dishMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.7 });
-    const dish = new THREE.Mesh(dishGeo, dishMat);
-    dish.position.set(0.5, 0.8, 0.7);
-    this.roverChassis.add(dish);
+      const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.5);
+      const sampleCount = 60;
+      const pathPoints: THREE.Vector3[] = [];
 
-    // Headlights
-    this.headlightLeft = new THREE.SpotLight(0xfff7ed, 4.0, 35, Math.PI / 5, 0.4);
-    this.headlightLeft.position.set(-0.6, 0.4, -1.2);
-    this.headlightLeft.target.position.set(-0.6, -0.2, -8);
-    this.roverChassis.add(this.headlightLeft);
-    this.roverChassis.add(this.headlightLeft.target);
+      for (let i = 0; i <= sampleCount; i++) {
+        const pt = curve.getPoint(i / sampleCount);
+        pt.y = this.getTerrainHeight(pt.x, pt.z) + 0.06;
+        pathPoints.push(pt);
+      }
 
-    this.headlightRight = new THREE.SpotLight(0xfff7ed, 4.0, 35, Math.PI / 5, 0.4);
-    this.headlightRight.position.set(0.6, 0.4, -1.2);
-    this.headlightRight.target.position.set(0.6, -0.2, -8);
-    this.roverChassis.add(this.headlightRight);
-    this.roverChassis.add(this.headlightRight.target);
+      const pathGeo = new THREE.BufferGeometry().setFromPoints(pathPoints);
+      const pathMat = new THREE.LineDashedMaterial({
+        color: 0x38bdf8,
+        dashSize: 1.2,
+        gapSize: 0.8,
+        linewidth: 2,
+        transparent: true,
+        opacity: 0.85,
+        depthWrite: false,
+      });
+      const pathLine = new THREE.Line(pathGeo, pathMat);
+      pathLine.computeLineDistances();
+      this.historicalTraverseGroup.add(pathLine);
 
-    // Six Rocker-Bogie Wheels
-    const wheelPositions = [
-      { x: -1.05, y: -0.15, z: -0.9, steerable: true },
-      { x: 1.05, y: -0.15, z: -0.9, steerable: true },
-      { x: -1.15, y: -0.15, z: 0.05, steerable: false },
-      { x: 1.15, y: -0.15, z: 0.05, steerable: false },
-      { x: -1.05, y: -0.15, z: 0.95, steerable: true },
-      { x: 1.05, y: -0.15, z: 0.95, steerable: true },
-    ];
+      // Milestone stakes along the route
+      [0, 0.25, 0.5, 0.75, 1.0].forEach((t) => {
+        const pt = curve.getPoint(t);
+        const y = this.getTerrainHeight(pt.x, pt.z);
+        const stake = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.04, 0.04, 0.8, 8),
+          new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8, roughness: 0.2 })
+        );
+        stake.position.set(pt.x, y + 0.4, pt.z);
+        stake.castShadow = true;
+        this.historicalTraverseGroup.add(stake);
 
-    const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.32, 16);
-    wheelGeo.rotateZ(Math.PI / 2);
-    const wheelMat = new THREE.MeshStandardMaterial({
-      color: 0x334155,
-      metalness: 0.7,
-      roughness: 0.5,
-    });
+        const cap = new THREE.Mesh(
+          new THREE.SphereGeometry(0.09, 8, 8),
+          new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
+        );
+        cap.position.set(pt.x, y + 0.85, pt.z);
+        this.historicalTraverseGroup.add(cap);
+      });
+    } else {
+      // Mars: Perseverance to Ingenuity Airfield Traverse (Jezero Crater 2021)
+      // Perseverance: (80, -15), Ingenuity Airfield: (92, -8)
+      const points = [
+        new THREE.Vector3(80, 0, -15),
+        new THREE.Vector3(83, 0, -13.5),
+        new THREE.Vector3(87, 0, -11.0),
+        new THREE.Vector3(90, 0, -9.2),
+        new THREE.Vector3(92, 0, -8.0),
+      ];
 
-    this.wheelMeshes = [];
-    this.wheelPivots = [];
+      const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.5);
+      const sampleCount = 50;
+      const pathPoints: THREE.Vector3[] = [];
 
-    wheelPositions.forEach((wp) => {
-      const pivot = new THREE.Group();
-      pivot.position.set(wp.x, wp.y, wp.z);
+      for (let i = 0; i <= sampleCount; i++) {
+        const pt = curve.getPoint(i / sampleCount);
+        pt.y = this.getTerrainHeight(pt.x, pt.z) + 0.06;
+        pathPoints.push(pt);
+      }
 
-      const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-      wheel.castShadow = true;
-      wheel.userData = { steerable: wp.steerable, isRear: wp.z > 0.5 };
+      const pathGeo = new THREE.BufferGeometry().setFromPoints(pathPoints);
+      const pathMat = new THREE.LineDashedMaterial({
+        color: 0xf97316,
+        dashSize: 1.4,
+        gapSize: 0.9,
+        linewidth: 2,
+        transparent: true,
+        opacity: 0.85,
+        depthWrite: false,
+      });
+      const pathLine = new THREE.Line(pathGeo, pathMat);
+      pathLine.computeLineDistances();
+      this.historicalTraverseGroup.add(pathLine);
 
-      pivot.add(wheel);
-      this.roverChassis!.add(pivot);
+      // Milestone stakes along the Mars aerial reconnaissance route
+      [0, 0.25, 0.5, 0.75, 1.0].forEach((t) => {
+        const pt = curve.getPoint(t);
+        const y = this.getTerrainHeight(pt.x, pt.z);
+        const stake = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.04, 0.04, 0.8, 8),
+          new THREE.MeshStandardMaterial({ color: 0xf97316, metalness: 0.8, roughness: 0.2 })
+        );
+        stake.position.set(pt.x, y + 0.4, pt.z);
+        stake.castShadow = true;
+        this.historicalTraverseGroup.add(stake);
 
-      this.wheelPivots.push(pivot);
-      this.wheelMeshes.push(wheel);
-    });
+        const cap = new THREE.Mesh(
+          new THREE.SphereGeometry(0.09, 8, 8),
+          new THREE.MeshBasicMaterial({ color: 0xfde047 })
+        );
+        cap.position.set(pt.x, y + 0.85, pt.z);
+        this.historicalTraverseGroup.add(cap);
+      });
+    }
+  }
+
+  public enterRover(): void {
+    if (this.explorationMode === 'driving' || !this.astronautActor || !this.roverChassis) return;
+
+    this.explorationMode = 'driving';
+    this.isAstronautInRover = true;
+    this.canEnterRover = false;
+
+    this.scene.remove(this.astronautActor.group);
+    this.roverChassis.add(this.astronautActor.group);
+    this.astronautActor.group.position.set(0, 0.36, 0.05);
+    this.astronautActor.group.rotation.set(0, 0, 0);
+
+    setAstronautPose(this.astronautActor, 'driving');
+
+    this.inputForward = 0;
+    this.inputTurn = 0;
+    this.inputBrake = false;
+
+    this.callbacks.onRoverInteractionStateChange?.(false, true);
+  }
+
+  public exitRover(): void {
+    if (this.explorationMode === 'walking' || !this.astronautActor || !this.roverChassis) return;
+
+    this.currentSpeed = 0;
+    this.inputForward = 0;
+    this.inputTurn = 0;
+    this.inputBrake = false;
+
+    this.explorationMode = 'walking';
+    this.isAstronautInRover = false;
+
+    this.roverChassis.remove(this.astronautActor.group);
+    this.scene.add(this.astronautActor.group);
+
+    const sinH = Math.sin(this.roverHeading);
+    const cosH = Math.cos(this.roverHeading);
+    const exitX = this.roverPosition.x - cosH * 2.0;
+    const exitZ = this.roverPosition.z + sinH * 2.0;
+    const exitY = this.getTerrainHeight(exitX, exitZ);
+
+    this.astronautPosition.set(exitX, exitY, exitZ);
+    this.astronautHeading = this.roverHeading;
+    this.astronautSpeed = 0;
+
+    this.astronautActor.group.position.copy(this.astronautPosition);
+    this.astronautActor.group.rotation.set(0, this.astronautHeading, 0);
+
+    setAstronautPose(this.astronautActor, 'standing');
+
+    this.canEnterRover = true;
+    this.callbacks.onRoverInteractionStateChange?.(true, false);
+  }
+
+  public toggleRoverEnterExit(): void {
+    if (this.explorationMode === 'walking') {
+      if (this.canEnterRover) {
+        this.enterRover();
+      }
+    } else {
+      this.exitRover();
+    }
   }
 
   private buildDustParticles(): void {
@@ -1325,7 +1509,7 @@ export class SurfaceExplorerScene {
       beaconGroup.add(ring);
 
       // 3D Rectangular Floating Name Banner (Eye-level directly over artifact)
-      const nameBanner = this.create3DNameBanner(wp.name, colorHex);
+      const nameBanner = this.create3DNameBanner(wp.name, colorHex, wp.landingYear);
       beaconGroup.add(nameBanner);
 
       this.beaconsGroup.add(beaconGroup);
@@ -1333,22 +1517,22 @@ export class SurfaceExplorerScene {
   }
 
   /**
-   * Creates a 3D Rectangular Name Banner using procedural HTML canvas texture
+   * Creates a 3D Rectangular Name Banner using procedural HTML canvas texture with Mission Name and Landing Year
    */
-  private create3DNameBanner(name: string, colorHex: number): THREE.Mesh {
+  private create3DNameBanner(name: string, colorHex: number, landingYear?: number): THREE.Mesh {
     const canvas = document.createElement('canvas');
     canvas.width = 512;
-    canvas.height = 128;
+    canvas.height = 140;
     const ctx = canvas.getContext('2d')!;
 
     const hexStr = '#' + colorHex.toString(16).padStart(6, '0');
 
     // Rounded rectangle background
-    ctx.fillStyle = 'rgba(6, 10, 22, 0.92)';
+    ctx.fillStyle = 'rgba(6, 10, 22, 0.94)';
     ctx.strokeStyle = hexStr;
     ctx.lineWidth = 6;
 
-    const x = 8, y = 8, w = 496, h = 112, r = 16;
+    const x = 8, y = 8, w = 496, h = 124, r = 16;
     ctx.beginPath();
     ctx.moveTo(x + r, y);
     ctx.lineTo(x + w - r, y);
@@ -1363,17 +1547,23 @@ export class SurfaceExplorerScene {
     ctx.fill();
     ctx.stroke();
 
-    // Text Label - crisp and legible
-    ctx.font = 'bold 30px sans-serif';
+    // Mission Title - crisp and legible
+    ctx.font = 'bold 27px sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
     let displayTitle = name;
-    if (displayTitle.length > 26) {
-      displayTitle = displayTitle.substring(0, 24) + '...';
+    if (displayTitle.length > 25) {
+      displayTitle = displayTitle.substring(0, 23) + '...';
     }
-    ctx.fillText(displayTitle, 256, 64);
+    ctx.fillText(displayTitle, 256, 48);
+
+    // Mission Landing Year Subtitle
+    ctx.font = 'bold 19px monospace';
+    ctx.fillStyle = hexStr;
+    const yearLabel = landingYear ? `HISTORIC YEAR • ${landingYear}` : 'EXPLORATION SITE';
+    ctx.fillText(yearLabel, 256, 92);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
@@ -1385,10 +1575,10 @@ export class SurfaceExplorerScene {
       depthWrite: false,
     });
 
-    // Compact proportional banner (3.8m wide by 1.1m tall) positioned at rover eye level (2.4m)
-    const planeGeo = new THREE.PlaneGeometry(3.8, 1.1);
+    // Proportional banner (3.8m wide by 1.2m tall) positioned directly over artifact at natural eye level (2.4m)
+    const planeGeo = new THREE.PlaneGeometry(3.8, 1.2);
     const mesh = new THREE.Mesh(planeGeo, mat);
-    mesh.position.set(0, 2.4, 0); // Directly above landmark at natural eye level
+    mesh.position.set(0, 2.4, 0);
     mesh.userData = { isNameBanner: true };
     return mesh;
   }
@@ -1551,12 +1741,50 @@ export class SurfaceExplorerScene {
     this.inputBrake = brake;
   }
 
+  /**
+   * Sets continuous mobile analog joystick vector
+   * @param x Left/right [-1.0 to 1.0]
+   * @param y Forward/backward [-1.0 to 1.0]
+   */
+  public setJoystickInput(x: number, y: number): void {
+    if (this.isPaused && (x !== 0 || y !== 0)) {
+      this.isPaused = false;
+      this.callbacks.onPauseChange?.(false);
+    }
+    const mag = Math.hypot(x, y);
+    if (mag > 0.05) {
+      this.joystickActive = true;
+      // Strictly normalize so diagonal movement is never faster than straight movement
+      const norm = Math.min(1.0, mag);
+      this.joystickX = (x / mag) * norm;
+      this.joystickY = (y / mag) * norm;
+    } else {
+      this.joystickActive = false;
+      this.joystickX = 0;
+      this.joystickY = 0;
+    }
+  }
+
+  /**
+   * Recenters camera behind the current active character / vehicle
+   */
+  public recenterCamera(): void {
+    this.cameraOrbit.theta = 0;
+    this.cameraOrbit.phi = Math.PI / 3.2;
+    this.cameraMode = 'follow';
+  }
+
   private handleKeyDown(e: KeyboardEvent): void {
     if (['ArrowUp', 'KeyW'].includes(e.code)) this.inputForward = 1;
     if (['ArrowDown', 'KeyS'].includes(e.code)) this.inputForward = -1;
     if (['ArrowLeft', 'KeyA'].includes(e.code)) this.inputTurn = -1;
     if (['ArrowRight', 'KeyD'].includes(e.code)) this.inputTurn = 1;
     if (['Space'].includes(e.code)) this.inputBrake = true;
+
+    // Enter / Exit Rover via keyboard [E] or [R]
+    if (['KeyE', 'KeyR'].includes(e.code)) {
+      this.toggleRoverEnterExit();
+    }
 
     if (e.code === 'KeyP') {
       this.togglePaused();
@@ -1654,9 +1882,13 @@ export class SurfaceExplorerScene {
 
     this.buildLightingAndAtmosphere();
     this.buildProceduralTerrain();
+    this.buildLandedSpacecraft();
     this.buildScatteredRocks();
     this.initWheelTracks();
     this.initRouteLine();
+    this.buildRoverModel();
+    this.buildAstronautModel();
+    this.buildHistoricalTraversePathway();
     this.updateWaypointBeacons();
     this.resetRoverPosition();
   }
@@ -1677,13 +1909,29 @@ export class SurfaceExplorerScene {
   }
 
   public resetRoverPosition(): void {
-    this.roverPosition.set(0, 0, 0);
-    const h = this.getTerrainHeight(0, 0);
+    this.roverPosition.set(0, 0, 6);
+    const h = this.getTerrainHeight(0, 6);
     this.roverPosition.y = h + 0.55;
     this.roverHeading = 0;
     this.currentSpeed = 0;
     this.roverGroup.position.copy(this.roverPosition);
     this.roverGroup.rotation.set(0, 0, 0);
+
+    const astroY = this.getTerrainHeight(2.2, 6);
+    this.astronautPosition.set(2.2, astroY, 6);
+    this.astronautHeading = 0;
+    this.astronautSpeed = 0;
+    if (this.astronautActor) {
+      if (this.roverChassis) this.roverChassis.remove(this.astronautActor.group);
+      this.scene.add(this.astronautActor.group);
+      this.astronautActor.group.position.copy(this.astronautPosition);
+      this.astronautActor.group.rotation.set(0, Math.PI, 0);
+      setAstronautPose(this.astronautActor, 'standing');
+    }
+    this.explorationMode = 'walking';
+    this.canEnterRover = true;
+    this.callbacks.onRoverInteractionStateChange?.(true, false);
+
     this.cameraOrbit.theta = 0;
     this.clearWheelTracks();
   }
@@ -1718,11 +1966,16 @@ export class SurfaceExplorerScene {
         this.updateLandingSequence();
       } else {
         if (!this.isPaused) {
-          // 1. Rover Driving Physics
-          this.updateRoverPhysics(delta);
+          if (this.explorationMode === 'driving') {
+            // 1. Rover Driving Physics
+            this.updateRoverPhysics(delta);
 
-          // 2. Visible Wheel Tracks
-          this.updateWheelTracks();
+            // 2. Visible Wheel Tracks
+            this.updateWheelTracks();
+          } else {
+            // 1. Astronaut Walking Physics
+            this.updateAstronautPhysics(delta);
+          }
         }
 
         // 3. Camera Tracking
@@ -1883,45 +2136,162 @@ export class SurfaceExplorerScene {
     });
   }
 
-  private updateCamera(delta: number): void {
-    if (this.cameraMode === 'follow') {
-      const distBehind = 7.5;
-      const heightAbove = 3.6;
+  private updateAstronautPhysics(delta: number): void {
+    const walkSpeedMax = 2.8; // m/s (~10 km/h)
+    const accelRate = 12.0;
+    const decelRate = 9.0;
+    const steerSpeed = 3.4;
 
-      const targetX = this.roverPosition.x + Math.sin(this.roverHeading) * distBehind;
-      const targetZ = this.roverPosition.z + Math.cos(this.roverHeading) * distBehind;
-      const targetY = this.roverPosition.y + heightAbove;
+    if (this.inputBrake) {
+      this.astronautSpeed = THREE.MathUtils.lerp(this.astronautSpeed, 0, delta * 14);
+    } else if (this.joystickActive) {
+      // Continuous mobile analog joystick
+      const mag = Math.hypot(this.joystickX, this.joystickY);
+      const targetSpeed = walkSpeedMax * mag;
+      this.astronautSpeed = THREE.MathUtils.lerp(this.astronautSpeed, targetSpeed, delta * accelRate);
+
+      // Desired heading relative to camera horizontal view
+      const camAngle = Math.atan2(
+        this.astronautPosition.x - this.camera.position.x,
+        this.astronautPosition.z - this.camera.position.z
+      );
+      const joyAngle = Math.atan2(-this.joystickX, -this.joystickY);
+      const desiredHeading = camAngle + joyAngle;
+
+      let angleDiff = desiredHeading - this.astronautHeading;
+      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+      this.astronautHeading += angleDiff * Math.min(1.0, delta * 11);
+    } else if (this.inputForward > 0) {
+      this.astronautSpeed = Math.min(walkSpeedMax, this.astronautSpeed + accelRate * delta);
+    } else if (this.inputForward < 0) {
+      this.astronautSpeed = Math.max(-1.4, this.astronautSpeed - accelRate * delta);
+    } else {
+      this.astronautSpeed = THREE.MathUtils.lerp(this.astronautSpeed, 0, delta * decelRate);
+    }
+
+    if (!this.joystickActive && this.inputTurn !== 0) {
+      this.astronautHeading -= this.inputTurn * steerSpeed * delta;
+    }
+
+    const moveDist = this.astronautSpeed * delta;
+    let nextX = this.astronautPosition.x - Math.sin(this.astronautHeading) * moveDist;
+    let nextZ = this.astronautPosition.z - Math.cos(this.astronautHeading) * moveDist;
+
+    // 1. Rock obstacle collision
+    const astronautRadius = 0.55;
+    for (const obs of this.rockObstacles) {
+      const dx = nextX - obs.x;
+      const dz = nextZ - obs.z;
+      const dist = Math.hypot(dx, dz);
+      const minDist = obs.radius + astronautRadius;
+      if (dist < minDist && dist > 0.001) {
+        const overlap = minDist - dist;
+        nextX += (dx / dist) * overlap;
+        nextZ += (dz / dist) * overlap;
+        this.astronautSpeed *= 0.3;
+      }
+    }
+
+    // 2. Rover physical collision (cannot walk through rover body)
+    const roverCollisionRadius = 1.7;
+    const dxR = nextX - this.roverPosition.x;
+    const dzR = nextZ - this.roverPosition.z;
+    const distRover = Math.hypot(dxR, dzR);
+    if (distRover < roverCollisionRadius && distRover > 0.001) {
+      const overlap = roverCollisionRadius - distRover;
+      nextX += (dxR / distRover) * overlap;
+      nextZ += (dzR / distRover) * overlap;
+      this.astronautSpeed *= 0.25;
+    }
+
+    // 3. Terrain boundaries
+    const bound = this.terrainSize * 0.46;
+    this.astronautPosition.x = THREE.MathUtils.clamp(nextX, -bound, bound);
+    this.astronautPosition.z = THREE.MathUtils.clamp(nextZ, -bound, bound);
+    this.astronautPosition.y = this.getTerrainHeight(this.astronautPosition.x, this.astronautPosition.z);
+
+    if (this.astronautActor) {
+      this.astronautActor.group.position.copy(this.astronautPosition);
+      this.astronautActor.group.rotation.set(0, this.astronautHeading, 0);
+
+      const isMoving = Math.abs(this.astronautSpeed) > 0.08;
+      updateAstronautAnimation(this.astronautActor, isMoving, this.astronautSpeed, delta);
+    }
+
+    if (Math.abs(moveDist) > 0.001) {
+      this.distanceTraveledMeters += Math.abs(moveDist);
+      this.batteryPercent = Math.max(10.0, this.batteryPercent - (delta * 0.005));
+    }
+
+    const speedKmh = Math.round(Math.abs(this.astronautSpeed) * 3.6 * 10) / 10;
+    const headingDeg = Math.round(((this.astronautHeading * (180 / Math.PI)) % 360 + 360) % 360);
+
+    const driveMode: 'DRIVE' | 'REVERSE' | 'PARKED' =
+      this.astronautSpeed > 0.1 ? 'DRIVE' : this.astronautSpeed < -0.1 ? 'REVERSE' : 'PARKED';
+
+    this.callbacks.onTelemetryUpdate?.({
+      speedKmh,
+      batteryPercent: Math.round(this.batteryPercent * 10) / 10,
+      distanceTraveledMeters: Math.round(this.distanceTraveledMeters),
+      headingDeg,
+      inclineDeg: 0,
+      signalDelaySec: this.signalDelaySec,
+      coordinates: {
+        x: Math.round(this.astronautPosition.x * 10) / 10,
+        z: Math.round(this.astronautPosition.z * 10) / 10,
+      },
+      isBraking: this.inputBrake,
+      driveMode,
+    });
+  }
+
+  private updateCamera(delta: number): void {
+    const focalPos = this.explorationMode === 'walking' ? this.astronautPosition : this.roverPosition;
+    const focalHeading = this.explorationMode === 'walking' ? this.astronautHeading : this.roverHeading;
+
+    if (this.cameraMode === 'follow') {
+      const distBehind = this.explorationMode === 'walking' ? 5.2 : 7.5;
+      const heightAbove = this.explorationMode === 'walking' ? 2.4 : 3.6;
+
+      const totalHeading = focalHeading + this.cameraOrbit.theta;
+      const targetX = focalPos.x + Math.sin(totalHeading) * distBehind;
+      const targetZ = focalPos.z + Math.cos(totalHeading) * distBehind;
+
+      // Collision-aware camera: ensure targetY is safely above terrain height at (targetX, targetZ)
+      const terrainAtCam = this.getTerrainHeight(targetX, targetZ);
+      const targetY = Math.max(focalPos.y + heightAbove, terrainAtCam + 1.2);
 
       this.camera.position.lerp(new THREE.Vector3(targetX, targetY, targetZ), 0.12);
       this.camera.lookAt(
-        this.roverPosition.x,
-        this.roverPosition.y + 1.2,
-        this.roverPosition.z
+        focalPos.x,
+        focalPos.y + (this.explorationMode === 'walking' ? 1.0 : 1.2),
+        focalPos.z
       );
     } else if (this.cameraMode === 'cockpit') {
-      const eyeX = this.roverPosition.x - Math.sin(this.roverHeading) * 0.2;
-      const eyeZ = this.roverPosition.z - Math.cos(this.roverHeading) * 0.2;
-      const eyeY = this.roverPosition.y + 1.8;
+      const eyeX = focalPos.x - Math.sin(focalHeading) * 0.2;
+      const eyeZ = focalPos.z - Math.cos(focalHeading) * 0.2;
+      const eyeY = focalPos.y + (this.explorationMode === 'walking' ? 1.65 : 1.8);
 
       this.camera.position.set(eyeX, eyeY, eyeZ);
 
-      const lookTargetX = this.roverPosition.x - Math.sin(this.roverHeading) * 20;
-      const lookTargetZ = this.roverPosition.z - Math.cos(this.roverHeading) * 20;
-      this.camera.lookAt(lookTargetX, eyeY - 0.4, lookTargetZ);
+      const lookTargetX = focalPos.x - Math.sin(focalHeading) * 20;
+      const lookTargetZ = focalPos.z - Math.cos(focalHeading) * 20;
+      this.camera.lookAt(lookTargetX, eyeY - 0.2, lookTargetZ);
     } else if (this.cameraMode === 'free') {
       const r = this.cameraOrbit.radius;
       const t = this.cameraOrbit.theta;
       const p = this.cameraOrbit.phi;
 
-      const camX = this.roverPosition.x + r * Math.sin(p) * Math.sin(t);
-      const camY = this.roverPosition.y + r * Math.cos(p);
-      const camZ = this.roverPosition.z + r * Math.sin(p) * Math.cos(t);
+      const camX = focalPos.x + r * Math.sin(p) * Math.sin(t);
+      const camY = focalPos.y + r * Math.cos(p);
+      const camZ = focalPos.z + r * Math.sin(p) * Math.cos(t);
 
-      this.camera.position.set(camX, Math.max(this.roverPosition.y + 1, camY), camZ);
+      this.camera.position.set(camX, Math.max(focalPos.y + 1, camY), camZ);
       this.camera.lookAt(
-        this.roverPosition.x,
-        this.roverPosition.y + 0.8,
-        this.roverPosition.z
+        focalPos.x,
+        focalPos.y + 0.8,
+        focalPos.z
       );
     }
   }
@@ -1948,10 +2318,12 @@ export class SurfaceExplorerScene {
     let closestWp: SurfaceWaypoint | null = null;
     let minD = 9999;
 
+    const activeExplorerPos = this.explorationMode === 'walking' ? this.astronautPosition : this.roverPosition;
+
     envWaypoints.forEach((wp) => {
       const d = Math.hypot(
-        this.roverPosition.x - wp.worldPos.x,
-        this.roverPosition.z - wp.worldPos.z
+        activeExplorerPos.x - wp.worldPos.x,
+        activeExplorerPos.z - wp.worldPos.z
       );
       if (d < minD) {
         minD = d;
@@ -1966,6 +2338,21 @@ export class SurfaceExplorerScene {
       this.callbacks.onAnomalyProximity?.(closestWp, this.nearestDistance);
     } else {
       this.callbacks.onAnomalyProximity?.(null, this.nearestDistance);
+    }
+
+    // Distance to rover check when walking (within 3.8m can enter vehicle)
+    if (this.explorationMode === 'walking') {
+      const distToRover = Math.hypot(
+        this.astronautPosition.x - this.roverPosition.x,
+        this.astronautPosition.z - this.roverPosition.z
+      );
+      const canEnter = distToRover <= 3.8;
+      if (canEnter !== this.canEnterRover) {
+        this.canEnterRover = canEnter;
+        this.callbacks.onRoverInteractionStateChange?.(canEnter, false);
+      }
+    } else {
+      this.callbacks.onRoverInteractionStateChange?.(false, true);
     }
   }
 

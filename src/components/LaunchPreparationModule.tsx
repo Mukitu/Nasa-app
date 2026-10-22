@@ -298,7 +298,7 @@ export const LaunchPreparationModule: React.FC<LaunchPreparationModuleProps> = (
                 }`}
               >
                 {autoLaunchActive ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                <span>{autoLaunchActive ? 'Pause Ascent' : 'Auto Launch (6.8s)'}</span>
+                <span>{autoLaunchActive ? 'Pause Ascent' : 'Launch'}</span>
               </button>
             )}
 

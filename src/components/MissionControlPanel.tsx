@@ -9,6 +9,7 @@ import {
   Moon,
   Flame,
   CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 
 interface MissionControlPanelProps {
@@ -33,6 +34,7 @@ export const MissionControlPanel: React.FC<MissionControlPanelProps> = ({
   onOpenHeritageSites,
 }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const [showTargetWarning, setShowTargetWarning] = useState(false);
 
   return (
     <div
@@ -101,16 +103,21 @@ export const MissionControlPanel: React.FC<MissionControlPanelProps> = ({
                 Expedition Destination
               </span>
               <span className="text-[10px] font-mono-tech text-sky-400 font-semibold">
-                {target === 'lunar_transit' ? 'LUNAR RECONNAISSANCE' : target === 'mars_transfer' ? 'MARTIAN EXPLORATION' : 'EARTH ORBIT'}
+                {target === 'lunar_transit' ? 'LUNAR RECONNAISSANCE' : target === 'mars_transfer' ? 'MARTIAN EXPLORATION' : 'SELECT TARGET'}
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs font-tech">
               <button
-                onClick={() => onSelectTarget('lunar_transit')}
+                onClick={() => {
+                  setShowTargetWarning(false);
+                  onSelectTarget('lunar_transit');
+                }}
                 className={`p-2 rounded-lg border text-left transition-all cursor-pointer flex items-center gap-2 ${
                   target === 'lunar_transit'
                     ? 'bg-sky-500/20 border-sky-400 text-sky-200 font-semibold shadow-xs'
+                    : showTargetWarning
+                    ? 'bg-rose-950/40 border-rose-500/80 text-slate-300 animate-pulse'
                     : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -122,10 +129,15 @@ export const MissionControlPanel: React.FC<MissionControlPanelProps> = ({
               </button>
 
               <button
-                onClick={() => onSelectTarget('mars_transfer')}
+                onClick={() => {
+                  setShowTargetWarning(false);
+                  onSelectTarget('mars_transfer');
+                }}
                 className={`p-2 rounded-lg border text-left transition-all cursor-pointer flex items-center gap-2 ${
                   target === 'mars_transfer'
                     ? 'bg-amber-500/20 border-amber-400 text-amber-200 font-semibold shadow-xs'
+                    : showTargetWarning
+                    ? 'bg-rose-950/40 border-rose-500/80 text-slate-300 animate-pulse'
                     : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -136,6 +148,14 @@ export const MissionControlPanel: React.FC<MissionControlPanelProps> = ({
                 </div>
               </button>
             </div>
+
+            {/* Target selection required warning */}
+            {showTargetWarning && (
+              <div className="p-2 rounded-lg bg-rose-950/90 border border-rose-500/70 text-rose-200 text-[11px] font-mono-tech flex items-center gap-2 animate-bounce">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>Please select Moon Expedition or Mars Expedition first before launching!</span>
+              </div>
+            )}
           </div>
 
           {/* Subsystem Readiness Matrix */}
@@ -170,11 +190,18 @@ export const MissionControlPanel: React.FC<MissionControlPanelProps> = ({
           {/* Action CTAs */}
           <div className="pt-1 space-y-2">
             <button
-              onClick={() => onPrepareLaunch()}
+              onClick={() => {
+                if (!target) {
+                  setShowTargetWarning(true);
+                  return;
+                }
+                setShowTargetWarning(false);
+                onPrepareLaunch();
+              }}
               className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-tech font-bold tracking-wider uppercase text-slate-950 bg-sky-400 hover:bg-sky-300 rounded transition-colors cursor-pointer shadow-md active:scale-95"
             >
               <Rocket className="w-4 h-4" />
-              <span>Launch {target === 'lunar_transit' ? 'Moon Mission' : target === 'mars_transfer' ? 'Mars Mission' : 'Spacecraft'}</span>
+              <span>Launch {target === 'lunar_transit' ? 'Moon Mission' : target === 'mars_transfer' ? 'Mars Mission' : 'Mission'}</span>
             </button>
 
             <button
